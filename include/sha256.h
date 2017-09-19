@@ -240,17 +240,24 @@ namespace daw {
 			}
 		} // namespace impl
 
-		template<typename CharT, typename Traits, typename InternalSizeType>
-		std::string sha256( daw::basic_string_view<CharT, Traits, InternalSizeType> input ) noexcept {
-			static_assert( sizeof( CharT ) == 1, "Only byte sized data allowed" );
-			std::array<CharT, sha256_ctx<CharT>::DIGEST_SIZE> digest;
+		template<typename Iterator> 
+		constexpr auto sha256_bin( Iterator const first, Iterator const last ) noexcept {
+			using value_type = std::decay_t<typename std::iterator_traits<Iterator>::value_type>;
+			auto const sz = std::distance( first, last );
+			static_assert( sizeof( value_type ) == 1, "Only byte sized data allowed" );
+			std::array<uint8_t, sha256_ctx<uint8_t>::DIGEST_SIZE> digest = {0};
 			std::fill( digest.begin( ), digest.end( ), 0 );
 
 			sha256_ctx<uint8_t> ctx{};
 			ctx.init( );
-			ctx.update( reinterpret_cast<uint8_t const *>( input.data( ) ), input.size( ) );
+			ctx.update( reinterpret_cast<uint8_t const *>( &(*first) ), sz );
 			ctx.final( reinterpret_cast<uint8_t *>( digest.data( ) ) );
+			return digest;
+		}
 
+		template<typename CharT, typename Traits, typename InternalSizeType>
+		std::string sha256( daw::basic_string_view<CharT, Traits, InternalSizeType> input ) noexcept {
+			auto const digest = sha256_bin( input.cbegin( ), input.cend( ) );
 			std::stringstream ss;
 			for( auto const c : digest ) {
 				auto as_hex = impl::to_hex( c );
@@ -258,6 +265,7 @@ namespace daw {
 			}
 			return ss.str( );
 		}
+
 		template<typename CharT, typename Traits>
 		std::string sha256( std::basic_string<CharT, Traits> const &input ) noexcept {
 			daw::string_view sv{ input.data( ), input.size( ) };
