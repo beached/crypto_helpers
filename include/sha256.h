@@ -29,89 +29,111 @@
 #include <sstream>
 #include <string>
 
+#include <daw/daw_array_view.h>
 #include <daw/daw_string_view.h>
 
 namespace daw {
 	namespace crypto {
 		namespace impl {
-			template<typename T, typename U>
-			constexpr auto SHA2_SHFR( T const x, U const n ) noexcept {
-				return x >> n;
+			template<size_t bits, typename word_t>
+			constexpr auto SHA2_SHFR( word_t const x) noexcept {
+				static_assert( bits <= sizeof( word_t )*8, "Cannot shift more than word size bits" );
+				return x >> bits;
 			}
 
-			template<typename T, typename U>
-			constexpr auto SHA2_ROTR( T const x, U const n ) noexcept {
-				return ( x >> n ) | ( x << ( ( sizeof( x ) << 3 ) - n ) );
+			template<size_t bits, typename word_t>
+			constexpr auto SHA2_ROTR( word_t const x ) noexcept {
+				static_assert( bits <= sizeof( word_t )*8, "Cannot shift more than word size bits" );
+				return ( x >> bits ) | ( x << ( ( sizeof( word_t ) * 8 ) - bits ) );
 			}
 
-			template<typename T, typename U>
-			constexpr auto SHA2_ROTL( T const x, U const n ) noexcept {
-				return ( x << n ) | ( x >> ( ( sizeof( x ) << 3 ) - n ) );
-			}
-
-			template<typename T, typename U, typename V>
-			constexpr auto SHA2_CH( T const x, U const y, V const z ) noexcept {
+			template<typename word_t>
+			constexpr auto SHA2_CH( word_t const x, word_t const y, word_t const z ) noexcept {
 				return ( x & y ) ^ ( ~x & z );
 			}
 
-			template<typename T, typename U, typename V>
-			constexpr auto SHA2_MAJ( T const x, U const y, V const z ) noexcept {
+			template<typename word_t>
+			constexpr auto SHA2_MAJ( word_t const x, word_t const y, word_t const z ) noexcept {
 				return ( x & y ) ^ ( x & z ) ^ ( y & z );
 			}
 
-			template<typename T>
-			constexpr auto SHA256_F1( T const x ) noexcept {
-				return SHA2_ROTR( x, 2 ) ^ SHA2_ROTR( x, 13 ) ^ SHA2_ROTR( x, 22 );
+			template<typename word_t>
+			constexpr auto SHA256_F1( word_t const x ) noexcept {
+				return SHA2_ROTR<2u>( x ) ^ SHA2_ROTR<13u>( x ) ^ SHA2_ROTR<22u>( x );
 			}
 
-			template<typename T>
-			constexpr auto SHA256_F2( T const x ) noexcept {
-				return SHA2_ROTR( x, 6 ) ^ SHA2_ROTR( x, 11 ) ^ SHA2_ROTR( x, 25 );
+			template<typename word_t>
+			constexpr auto SHA256_F2( word_t const x ) noexcept {
+				return SHA2_ROTR<6u>( x ) ^ SHA2_ROTR<11u>( x ) ^ SHA2_ROTR<25u>( x );
 			}
 
-			template<typename T>
-			constexpr auto SHA256_F3( T const x ) noexcept {
-				return SHA2_ROTR( x, 7 ) ^ SHA2_ROTR( x, 18 ) ^ SHA2_SHFR( x, 3 );
+			template<typename word_t>
+			constexpr auto SHA256_F3( word_t const x ) noexcept {
+				return SHA2_ROTR<7u>( x ) ^ SHA2_ROTR<18u>( x ) ^ SHA2_SHFR<3u>( x );
 			}
 
-			template<typename T>
-			constexpr auto SHA256_F4( T const x ) noexcept {
-				return SHA2_ROTR( x, 17 ) ^ SHA2_ROTR( x, 19 ) ^ SHA2_SHFR( x, 10 );
+			template<typename word_t>
+			constexpr auto SHA256_F4( word_t const x ) noexcept {
+				return SHA2_ROTR<17u>( x ) ^ SHA2_ROTR<19u>( x ) ^ SHA2_SHFR<10u>( x );
 			}
 
-			template<typename T, typename Ptr>
-			constexpr void SHA2_UNPACK32( T x, Ptr str ) noexcept {
-				*( ( str ) + 3 ) = static_cast<char>( ( x ) );
-				*( ( str ) + 2 ) = static_cast<char>( ( x ) >> 8 );
-				*( ( str ) + 1 ) = static_cast<char>( ( x ) >> 16 );
-				*( ( str ) + 0 ) = static_cast<char>( ( x ) >> 24 );
+			constexpr void SHA2_UNPACK32( uint32_t const x, uint8_t *str ) noexcept {
+				str[3] = static_cast<uint8_t>( x );
+				str[2] = static_cast<uint8_t>( x >> 8u );
+				str[1] = static_cast<uint8_t>( x >> 16u );
+				str[0] = static_cast<uint8_t>( x >> 24u );
 			}
 
-			template<typename Ptr, typename T>
-			constexpr void SHA2_PACK32( Ptr str, T x ) noexcept {
-				*( x ) = static_cast<uint32_t>( *( ( str ) + 3 ) ) |
-				         ( static_cast<uint32_t>( *( ( str ) + 2 ) ) << 8 ) |
-				         ( static_cast<uint32_t>( *( ( str ) + 1 ) ) << 16 ) |
-				         ( static_cast<uint32_t>( *( ( str ) + 0 ) ) << 24 );
+			constexpr void SHA2_PACK32( uint8_t const *str, uint32_t & x ) noexcept {
+				x = static_cast<uint32_t>( str[3] ) | static_cast<uint32_t>( str[2] << 8u ) |
+				    static_cast<uint32_t>( str[1] << 16u ) | static_cast<uint32_t>( str[0] << 24u );
 			}
 
-			std::array<uint32_t, 64> const &sha256_k( ) noexcept;
+			constexpr uint8_t to_nibble( uint8_t c ) noexcept {
+				c &= 0x0F;
+				if( c < 10 ) {
+					return '0' + c;
+				}
+				return 'a' + ( c - 10 );
+			}
+
+			constexpr uint16_t to_hex( uint8_t c ) noexcept {
+				auto result = static_cast<uint16_t>( to_nibble( c >> 4u ) << 8u );
+				result |= to_nibble( c );
+				return result;
+			}
 		} // namespace impl
 
-		template<typename CharT>
-		struct sha256_ctx {
-			static_assert( sizeof( CharT ) == 1, "Only byte sized data allowed" );
-			static constexpr size_t const SHA224_256_BLOCK_SIZE = ( 512 / 8 );
-			static constexpr size_t const DIGEST_SIZE = ( 256 / 8 );
+		template<size_t digest_size, typename>
+		struct sha2_ctx;
 
+		template<typename T>
+		struct sha2_ctx<256, T> {
+			using word_t = uint32_t;
+			static constexpr size_t const block_size = (512/8);	// 512 bits
+			static constexpr size_t const digest_size = ( 256 / 8 ); // 256 bits
+			struct digest_t {
+				std::array<uint8_t, digest_size> data;
+
+				constexpr digest_t( ) noexcept: data{{0}} {}
+
+				std::string to_hex_string( ) const {
+					std::stringstream ss;
+					for( auto const c : data ) {
+						auto as_hex = impl::to_hex( c );
+						ss << static_cast<char>( ( as_hex & 0xFF00 ) >> 8 ) << static_cast<char>( as_hex & 0x00FF );
+					}
+					return ss.str( );
+				}
+			};
 		  private:
-			size_t m_tot_len;
-			size_t m_len;
-			std::array<CharT, 2 * SHA224_256_BLOCK_SIZE> m_block;
-			std::array<uint32_t, 8> m_h;
+			word_t m_tot_len;
+			word_t m_len;
+			std::array<uint8_t, 2 * block_size> m_block;
+			std::array<word_t, 8> m_h;
 
-			constexpr void transform( CharT const *message, size_t const block_nb ) noexcept {
-				std::array<uint32_t, 64> const sha256_k = {
+			constexpr void transform( uint8_t const *message, size_t const block_nb ) noexcept {
+				std::array<word_t, 64> const sha256_k = {
 				    {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
 				     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
 				     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -121,16 +143,16 @@ namespace daw {
 				     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
 				     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2}};
 
-				std::array<uint32_t, 64> w = {0};
-				std::array<uint32_t, 8> wv = {0};
-				uint32_t t1 = 0;
-				uint32_t t2 = 0;
-				CharT const *sub_block = nullptr;
+				std::array<word_t, 64> w = {0};
+				std::array<word_t, 8> wv = {0};
+				word_t t1 = 0;
+				word_t t2 = 0;
+				uint8_t const *sub_block = nullptr;
 				size_t j = 0;
 				for( size_t i = 0; i < block_nb; i++ ) {
 					sub_block = message + ( i << 6 );
 					for( j = 0; j < 16; j++ ) {
-						impl::SHA2_PACK32( &sub_block[j << 2], &w[j] );
+						impl::SHA2_PACK32( &sub_block[j << 2], w[j] );
 					}
 					for( j = 16; j < 64; j++ ) {
 						w[j] = impl::SHA256_F4( w[j - 2] ) + w[j - 7] + impl::SHA256_F3( w[j - 15] ) + w[j - 16];
@@ -139,7 +161,8 @@ namespace daw {
 						wv[j] = m_h[j];
 					}
 					for( j = 0; j < 64; j++ ) {
-						t1 = wv[7] + impl::SHA256_F2( wv[4] ) + impl::SHA2_CH( wv[4], wv[5], wv[6] ) + sha256_k[j] + w[j];
+						t1 = wv[7] + impl::SHA256_F2( wv[4] ) + impl::SHA2_CH( wv[4], wv[5], wv[6] ) + sha256_k[j] +
+						     w[j];
 						t2 = impl::SHA256_F1( wv[0] ) + impl::SHA2_MAJ( wv[0], wv[1], wv[2] );
 						wv[7] = wv[6];
 						wv[6] = wv[5];
@@ -156,127 +179,126 @@ namespace daw {
 				}
 			}
 
-			template<typename T, size_t N>
-			constexpr void transform( std::array<T, N> const &message, size_t block_nb ) noexcept {
+			template<typename U, size_t N>
+			constexpr void transform( std::array<U, N> const &message, size_t const block_nb ) noexcept {
 				return transform( message.data( ), block_nb );
 			}
 
-		  public:
-			constexpr void init( ) noexcept {
-				m_h[0] = 0x6a09e667;
-				m_h[1] = 0xbb67ae85;
-				m_h[2] = 0x3c6ef372;
-				m_h[3] = 0xa54ff53a;
-				m_h[4] = 0x510e527f;
-				m_h[5] = 0x9b05688c;
-				m_h[6] = 0x1f83d9ab;
-				m_h[7] = 0x5be0cd19;
-				m_len = 0;
-				m_tot_len = 0;
+			template<typename Iterator1, typename Iterator2>
+			constexpr void copy_values( Iterator1 first_in, size_t count, Iterator2 first_out ) noexcept {
+				for( size_t n=0; n<count; ++n ) {
+					*first_out++ = *first_in++;
+				}
 			}
 
-			constexpr void update( CharT const *message, size_t const len ) noexcept {
-				size_t block_nb = 0;
-				size_t new_len = 0;
-				size_t rem_len = 0;
-				size_t tmp_len = 0;
-				CharT const *shifted_message = nullptr;
-				tmp_len = SHA224_256_BLOCK_SIZE - m_len;
+			template<typename Iterator, typename U>
+			constexpr void fill_values( Iterator first, size_t count, U const value ) noexcept {
+				for( size_t n=0; n<count; ++n ) {
+					*first++ = value;
+				}
+			}
+
+		  public:
+			constexpr sha2_ctx( ) noexcept
+			    : m_tot_len{0}, m_len{0}, m_block{0}, m_h{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+			                                              0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19} {}
+
+			constexpr void update_impl( uint8_t const *message, uint32_t const len ) noexcept {
+				assert( len <= block_size );
+				word_t block_nb = 0;
+				word_t new_len = 0;
+				word_t rem_len = 0;
+				word_t tmp_len = 0;
+				uint8_t const *shifted_message = nullptr;
+				tmp_len = block_size - m_len;
 				rem_len = len < tmp_len ? len : tmp_len;
-				std::copy( message, std::next( message, rem_len ), std::next( m_block.data( ), m_len ) );
-				if( m_len + len < SHA224_256_BLOCK_SIZE ) {
+				copy_values( message, rem_len, &m_block[m_len] );
+				if( m_len + len < block_size ) {
 					m_len += len;
 					return;
 				}
 				new_len = len - rem_len;
-				block_nb = new_len / SHA224_256_BLOCK_SIZE;
+				block_nb = new_len / block_size;
 				shifted_message = message + rem_len;
-				transform( m_block.data( ), 1 );
+				transform( m_block.data( ), 1u );
 				transform( shifted_message, block_nb );
-				rem_len = new_len % SHA224_256_BLOCK_SIZE;
-				{
-					auto const first = std::next( shifted_message, block_nb << 6 );
-					std::copy( first, std::next( first, rem_len ), m_block.data( ) );
-				}
+				rem_len = new_len % block_size;
+				copy_values( &shifted_message[block_nb << 6u], rem_len, m_block.data( ) );
 				m_len = rem_len;
-				m_tot_len += ( block_nb + 1 ) << 6;
+				m_tot_len += ( block_nb + 1u ) << 6u;
 			}
 
-			constexpr void final( CharT *digest ) noexcept {
-				unsigned int block_nb = 0;
-				unsigned int pm_len = 0;
-				unsigned int len_b = 0;
-				int i = 0;
-				block_nb = ( 1 + ( ( SHA224_256_BLOCK_SIZE - 9 ) < ( m_len % SHA224_256_BLOCK_SIZE ) ) );
-				len_b = ( m_tot_len + m_len ) << 3;
-				pm_len = block_nb << 6;
-				//memset( m_block.data( ) + m_len, 0, pm_len - m_len );
-				{
-					auto const first = std::next( m_block.data( ), m_len );
-					std::fill( first, std::next( first, pm_len - m_len ), 0 );
+			void update( T const *message, size_t len ) noexcept {
+				auto ptr = static_cast<uint8_t const *>( static_cast<void const *>( message ) );
+				len *= sizeof( T );
+				while( len > 0 ) {
+					auto const sz = static_cast<uint32_t>( std::min( block_size, len ) );
+					update_impl( ptr, sz );
+					if( sz <= len ) {
+						ptr += sz;
+						len -= sz;
+					}
 				}
-				m_block[m_len] = static_cast<CharT>( 0x80 );
-				impl::SHA2_UNPACK32( len_b, m_block.data( ) + pm_len - 4 );
+			}
+
+			constexpr digest_t create_digest( ) noexcept {
+				return digest_t{ };
+			}
+
+			constexpr void final( digest_t & digest ) noexcept {
+				word_t const block_nb = ( 1u + ( ( block_size - 9u ) < ( m_len % block_size ) ) );
+				auto const len_b = static_cast<word_t>(( m_tot_len + m_len ) << 3u);
+				word_t const pm_len = block_nb << 6u;
+				fill_values( &m_block[m_len], pm_len - m_len, static_cast<uint8_t>(0) );
+				m_block[m_len] = 0x80u;
+				impl::SHA2_UNPACK32( len_b, m_block.data( ) + pm_len - 4u );
 				transform( m_block.data( ), block_nb );
-				for( i = 0; i < 8; i++ ) {
-					impl::SHA2_UNPACK32( m_h[i], &digest[i << 2] );
+				for( size_t i = 0; i < 8; i++ ) {
+					impl::SHA2_UNPACK32( m_h[i], &digest.data[i << 2u] );
 				}
+			}
+
+			constexpr digest_t final( ) noexcept {
+				digest_t digest{};
+				final( digest );
+				return digest;
 			}
 		};
 
-		namespace impl {
-			constexpr uint8_t to_nibble( uint8_t c ) noexcept {
-				c &= 0x0F;
-				if( c < 10 ) {
-					return '0' + c;
-				}
-				return 'a' + ( c - 10 );
+		template<typename T = char>
+		constexpr auto sha256_bin( daw::array_view<T> view ) noexcept {
+			sha2_ctx<256, T> ctx{};
+			while( view.size( ) > ctx.block_size ) {
+				ctx.update( view.data( ), ctx.block_size );
+				view.remove_prefix( ctx.block_size );
 			}
+			ctx.update( view.data( ), static_cast<uint32_t>( view.size( ) ) );
+			return ctx.final( );
+		}
 
-			constexpr uint16_t to_hex( uint8_t c ) noexcept {
-				uint16_t result = to_nibble( c >> 4 ) << 8;
-				result |= to_nibble( c );
-				return result;
-			}
-		} // namespace impl
+		template<typename Container>
+		constexpr auto sha256_bin( Container const &container ) noexcept {
+			return sha256_bin(
+			    daw::make_array_view( reinterpret_cast<uint8_t const *>( &( *std::cbegin( container ) ) ),
+			                          reinterpret_cast<uint8_t const *>( &( *std::cend( container ) ) ) ) );
+		}
 
-		template<typename Iterator> 
+		template<typename Iterator>
 		constexpr auto sha256_bin( Iterator const first, Iterator const last ) noexcept {
-			using value_type = std::decay_t<typename std::iterator_traits<Iterator>::value_type>;
-			auto const sz = std::distance( first, last );
-			static_assert( sizeof( value_type ) == 1, "Only byte sized data allowed" );
-			std::array<uint8_t, sha256_ctx<uint8_t>::DIGEST_SIZE> digest = {0};
-			std::fill( digest.begin( ), digest.end( ), 0 );
-
-			sha256_ctx<uint8_t> ctx{};
-			ctx.init( );
-			ctx.update( reinterpret_cast<uint8_t const *>( &(*first) ), sz );
-			ctx.final( reinterpret_cast<uint8_t *>( digest.data( ) ) );
-			return digest;
+			return sha256_bin( daw::make_array_view( reinterpret_cast<uint8_t const *>( &( *first ) ),
+			                                         reinterpret_cast<uint8_t const *>( &( *last ) ) ) );
 		}
 
-		template<typename CharT, typename Traits, typename InternalSizeType>
-		std::string sha256( daw::basic_string_view<CharT, Traits, InternalSizeType> input ) noexcept {
-			auto const digest = sha256_bin( input.cbegin( ), input.cend( ) );
-			std::stringstream ss;
-			for( auto const c : digest ) {
-				auto as_hex = impl::to_hex( c );
-				ss << static_cast<char>( ( as_hex & 0xFF00 ) >> 8 ) << static_cast<char>( as_hex & 0x00FF );
-			}
-			return ss.str( );
+		template<typename String>
+		std::string sha256( String const &str ) noexcept {
+			return sha256_bin( std::cbegin( str ), std::cend( str ) ).to_hex_string( );
 		}
 
-		template<typename CharT, typename Traits>
-		std::string sha256( std::basic_string<CharT, Traits> const &input ) noexcept {
-			daw::string_view sv{ input.data( ), input.size( ) };
-			return sha256( sv );
+		template<typename CharT, size_t N>
+		std::string sha256( CharT const ( &s )[N] ) noexcept {
+			return sha256_bin( s, s + N - 1 ).to_hex_string( );
 		}
 
-		template<typename Str>
-		std::string sha256( Str const &str ) {
-			std::string str_str = str;
-			return sha256( str_str );
-		}
 	} // namespace crypto
 } // namespace daw
 

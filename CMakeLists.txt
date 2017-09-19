@@ -15,7 +15,7 @@ if( ${CMAKE_CXX_COMPILER_ID} STREQUAL 'MSVC' )
 	add_compile_options( -D_WIN32_WINNT=0x0601 /std:c++latest ) 
 else( )
 	if( ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" )
-		add_compile_options(-std=c++14 -march=native -pthread -Weverything -Wno-c++98-compat -Wno-covered-switch-default -Wno-padded -Wno-exit-time-destructors -Wno-c++98-compat-pedantic -Wno-unused-parameter -Wno-missing-noreturn -Wno-missing-prototypes -Wno-disabled-macro-expansion)
+		add_compile_options(-std=c++14 -march=native -Weverything -Wno-missing-braces -Wno-c++98-compat -Wno-covered-switch-default -Wno-padded -Wno-exit-time-destructors -Wno-c++98-compat-pedantic -Wno-unused-parameter -Wno-missing-noreturn -Wno-missing-prototypes -Wno-disabled-macro-expansion)
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	elseif( ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" )
@@ -50,10 +50,6 @@ set( HEADER_FILES
 	${HEADER_FOLDER}/sha256.h
 )
 
-set( SOURCE_FILES
-	#	${SOURCE_FOLDER}/sha256.cpp
-)
-
 #add_library( crypto_lib ${HEADER_FILES} ${SOURCE_FILES} )
 #target_link_libraries( crypto_lib ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 #add_dependencies( crypto_lib header_libraries_prj )
@@ -64,6 +60,10 @@ add_executable( sha256_test_bin ${HEADER_FILES} ${TEST_FOLDER}/sha256_test.cpp )
 target_link_libraries( sha256_test_bin ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( sha256_test_bin header_libraries_prj )
 add_test( sha256_test sha256_test_bin )
+
+add_executable( sha256sum ${HEADER_FILES} ${SOURCE_FOLDER}/sha256_file.cpp )
+target_link_libraries( sha256sum ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
+add_dependencies( sha256sum header_libraries_prj )
 
 #install( TARGETS crypto_lib DESTINATION lib )
 install( DIRECTORY ${HEADER_FOLDER}/ DESTINATION include/daw/crypto )
