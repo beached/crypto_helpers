@@ -133,7 +133,7 @@ namespace daw {
 			std::array<word_t, 8> m_h;
 
 			constexpr void transform( uint8_t const *message, size_t const block_nb ) noexcept {
-				std::array<word_t, 64> const sha256_k = {
+				std::array<word_t const, 64> const sha256_k = {
 				    {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
 				     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
 				     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -150,9 +150,9 @@ namespace daw {
 				uint8_t const *sub_block = nullptr;
 				size_t j = 0;
 				for( size_t i = 0; i < block_nb; i++ ) {
-					sub_block = message + ( i << 6 );
+					sub_block = message + ( i * 64u);
 					for( j = 0; j < 16; j++ ) {
-						impl::SHA2_PACK32( &sub_block[j << 2], w[j] );
+						impl::SHA2_PACK32( &sub_block[j * 4u], w[j] );
 					}
 					for( j = 16; j < 64; j++ ) {
 						w[j] = impl::SHA256_F4( w[j - 2] ) + w[j - 7] + impl::SHA256_F3( w[j - 15] ) + w[j - 16];
@@ -223,12 +223,12 @@ namespace daw {
 				transform( m_block.data( ), 1u );
 				transform( shifted_message, block_nb );
 				rem_len = new_len % block_size;
-				copy_values( &shifted_message[block_nb << 6u], rem_len, m_block.data( ) );
+				copy_values( &shifted_message[block_nb * 64u], rem_len, m_block.data( ) );
 				m_len = rem_len;
-				m_tot_len += ( block_nb + 1u ) << 6u;
+				m_tot_len += ( block_nb + 1u ) * 64u;
 			}
 
-			void update( T const *message, size_t len ) noexcept {
+			constexpr void update( T const *message, size_t len ) noexcept {
 				auto ptr = static_cast<uint8_t const *>( static_cast<void const *>( message ) );
 				len *= sizeof( T );
 				while( len > 0 ) {
@@ -246,15 +246,15 @@ namespace daw {
 			}
 
 			constexpr void final( digest_t & digest ) noexcept {
-				word_t const block_nb = ( 1u + ( ( block_size - 9u ) < ( m_len % block_size ) ) );
-				auto const len_b = static_cast<word_t>(( m_tot_len + m_len ) << 3u);
-				word_t const pm_len = block_nb << 6u;
+				word_t const block_nb = 1 + (( ( block_size - 9u ) < ( m_len % block_size ) ) ? 1 : 0);
+				auto const len_b = static_cast<word_t>(( m_tot_len + m_len ) * 8u);
+				word_t const pm_len = block_nb * 64u;
 				fill_values( &m_block[m_len], pm_len - m_len, static_cast<uint8_t>(0) );
 				m_block[m_len] = 0x80u;
 				impl::SHA2_UNPACK32( len_b, m_block.data( ) + pm_len - 4u );
 				transform( m_block.data( ), block_nb );
 				for( size_t i = 0; i < 8; i++ ) {
-					impl::SHA2_UNPACK32( m_h[i], &digest.data[i << 2u] );
+					impl::SHA2_UNPACK32( m_h[i], &digest.data[i * 4u] );
 				}
 			}
 

@@ -26,28 +26,54 @@
 #include <iostream>
 
 #include <daw/daw_memory_mapped_file.h>
+#include <daw/daw_string_view.h>
 
 #include "sha256.h"
 
-int main( int argc, char **argv ) {
-	assert( argc >= 1 );
+template<typename GetData>
+void do_sha256( GetData get_data, daw::string_view sv ) {
+	assert( istr );
 	using namespace daw::crypto;
 	sha2_ctx<256, char> ctx{};
-	std::array<char, sha2_ctx<256, char>::block_size/2> buffer = {0};
-
-	std::ifstream in_file{argv[1], std::ios::binary};
-	assert( in_file );
-	auto count = in_file.readsome( buffer.data( ), static_cast<std::streamsize>( buffer.size( ) ) );
+	std::array<char, sha2_ctx<256, char>::block_size / 2> buffer = {0};
+	std::streamsize count = 0;
+	auto is_good = get_data( buffer, count );
 	while( count > 0 ) {
 		ctx.update( buffer.data( ), static_cast<uint32_t>( count ) );
-		if( !in_file ) {
+		if( !is_good ) {
 			break;
 		}
-		count = in_file.readsome( buffer.data( ), static_cast<std::streamsize>( buffer.size( ) ) );
+		is_good = get_data( buffer, count );
 	}
 	auto digest = ctx.final( );
+	std::cout << digest.to_hex_string( ) << "  " << sv << '\n';
+}
 
-	std::cout << digest.to_hex_string( ) << "  " << argv[1] << '\n';
+int main( int argc, char **argv ) {
+	if( argc > 1 ) {
+		std::ifstream in_file{argv[1], std::ios::binary};
+		if( in_file ) {
+			do_sha256(
+			    [&in_file]( auto &buffer, auto& count ) {
+				    count = in_file.readsome( buffer.data( ), static_cast<std::streamsize>( buffer.size( ) ) );
+				    return static_cast<bool>( in_file );
+			    },
+			    argv[1] );
+			return EXIT_SUCCESS;
+		}
+	}
+	do_sha256(
+	    []( auto &buffer, auto &count ) {
+		    std::istream_iterator<char> first{std::cin};
+		    std::istream_iterator<char> last{};
+			size_t n=0;
+			for( ; n<buffer.size( ) && first != last; ++n, ++first ) {
+				buffer[n] = *first;
+			}
+			count = n;
+			return static_cast<bool>(std::cin);
+	    },
+	    "-" );
 	return EXIT_SUCCESS;
 }
 
