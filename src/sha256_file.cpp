@@ -51,16 +51,14 @@ void do_sha256( GetData get_data, daw::string_view sv ) {
 
 int main( int argc, char **argv ) {
 	if( argc > 1 ) {
-		std::ifstream in_file{argv[1], std::ios::binary};
-		if( in_file ) {
-			do_sha256(
-			    [&in_file]( auto &buffer, auto& count ) {
-				    count = in_file.readsome( buffer.data( ), static_cast<std::streamsize>( buffer.size( ) ) );
-				    return static_cast<bool>( in_file );
-			    },
-			    argv[1] );
+		daw::filesystem::memory_mapped_file_t<uint8_t> const mmf{argv[1]};
+		if( mmf ) {
+			auto const digest = daw::crypto::sha256_bin( daw::array_view<uint8_t>{mmf.data( ), mmf.size( )} );
+			std::cout << digest.to_hex_string( ) << " " << argv[1] << '\n';
 			return EXIT_SUCCESS;
 		}
+		std::cerr << "Could not open file '" << argv[1] << "'\n";
+		return EXIT_FAILURE;
 	}
 	do_sha256(
 	    []( auto &buffer, auto &count ) {
@@ -70,8 +68,8 @@ int main( int argc, char **argv ) {
 			for( ; n<buffer.size( ) && first != last; ++n, ++first ) {
 				buffer[n] = *first;
 			}
-			count = n;
-			return static_cast<bool>(std::cin);
+		    count = static_cast<std::streamsize>( n );
+		    return static_cast<bool>(std::cin);
 	    },
 	    "-" );
 	return EXIT_SUCCESS;

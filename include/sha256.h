@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
@@ -30,6 +29,8 @@
 #include <string>
 
 #include <daw/daw_array_view.h>
+#include <daw/daw_fixed_stack.h>
+#include <daw/daw_stack_array.h>
 #include <daw/daw_string_view.h>
 
 namespace daw {
@@ -104,63 +105,123 @@ namespace daw {
 			}
 		} // namespace impl
 
+		template<size_t digest_size>
+		struct digest_t {
+			using value_t = uint8_t;
+			using reference = value_t &;
+			using const_reference = value_t const &;
+			using iterator = value_t *;
+			using const_iterator = value_t const *;
+			daw::array_t<value_t, digest_size> m_data;
+
+			constexpr digest_t( ) noexcept : m_data{0} {}
+
+			std::string to_hex_string( ) const {
+				std::stringstream ss;
+				for( auto const c : m_data ) {
+					auto as_hex = impl::to_hex( c );
+					ss << static_cast<char>( ( as_hex & 0xFF00 ) >> 8 ) << static_cast<char>( as_hex & 0x00FF );
+				}
+				return ss.str( );
+			}
+
+			constexpr size_t size( ) const noexcept {
+				return m_data.size( );
+			}
+
+			constexpr reference operator[]( size_t pos ) noexcept {
+				return m_data[pos];
+			}
+
+			constexpr const_reference operator[]( size_t pos ) const noexcept {
+				return m_data[pos];
+			}
+
+			constexpr iterator data( ) noexcept {
+				return m_data.data( );
+			}
+
+			constexpr iterator begin( ) noexcept {
+				return m_data.begin( );
+			}
+
+			constexpr iterator end( ) noexcept {
+				return m_data.end( );
+			}
+
+			constexpr const_iterator data( ) const noexcept {
+				return m_data.data( );
+			}
+
+			constexpr const_iterator begin( ) const noexcept {
+				return m_data.begin( );
+			}
+
+			constexpr const_iterator cbegin( ) const noexcept {
+				return m_data.cbegin( );
+			}
+
+			constexpr const_iterator end( ) const noexcept {
+				return m_data.end( );
+			}
+
+			constexpr const_iterator cend( ) const noexcept {
+				return m_data.cend( );
+			}
+		};
+		using sha256_digest_t = digest_t<256/8>;
+
 		template<size_t digest_size, typename>
 		struct sha2_ctx;
 
 		template<typename T>
 		struct sha2_ctx<256, T> {
 			using word_t = uint32_t;
-			static constexpr size_t const block_size = (512/8);	// 512 bits
+			using byte_t = uint8_t;
+			static constexpr size_t const block_size = ( 512 / 8 );  // 512 bits
 			static constexpr size_t const digest_size = ( 256 / 8 ); // 256 bits
-			struct digest_t {
-				std::array<uint8_t, digest_size> data;
 
-				constexpr digest_t( ) noexcept: data{{0}} {}
-
-				std::string to_hex_string( ) const {
-					std::stringstream ss;
-					for( auto const c : data ) {
-						auto as_hex = impl::to_hex( c );
-						ss << static_cast<char>( ( as_hex & 0xFF00 ) >> 8 ) << static_cast<char>( as_hex & 0x00FF );
-					}
-					return ss.str( );
-				}
-			};
 		  private:
-			word_t m_tot_len;
-			word_t m_len;
-			std::array<uint8_t, 2 * block_size> m_block;
-			std::array<word_t, 8> m_h;
+			size_t m_tot_len;
+			size_t m_len;
+//			daw::array_t<byte_t, 2*block_size> m_block;
+			daw::fixed_stack_t<byte_t, 2*block_size> m_block;
+			daw::array_t<word_t, 8> m_h;
 
-			constexpr void transform( uint8_t const *message, size_t const block_nb ) noexcept {
-				std::array<word_t const, 64> const sha256_k = {
-				    {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-				     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-				     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-				     0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-				     0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-				     0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-				     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-				     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2}};
+			constexpr void transform( byte_t const *message, size_t const block_nb ) noexcept {
+				/*
+				 * Initialize array of round constants:
+				 * (first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311):
+				 */
+				daw::array_t<word_t, 64> const sha256_k{
+				    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+				    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+				    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+				    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+				    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+				    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+				    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+				    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-				std::array<word_t, 64> w = {0};
-				std::array<word_t, 8> wv = {0};
+				daw::array_t<word_t, 64> w = {0};
+				daw::array_t<word_t, 8> wv = {0};
 				word_t t1 = 0;
 				word_t t2 = 0;
-				uint8_t const *sub_block = nullptr;
-				size_t j = 0;
+
+				byte_t const *sub_block = nullptr;
+
 				for( size_t i = 0; i < block_nb; i++ ) {
 					sub_block = message + ( i * 64u);
-					for( j = 0; j < 16; j++ ) {
+					for( size_t j = 0; j < 16; j++ ) {
 						impl::SHA2_PACK32( &sub_block[j * 4u], w[j] );
 					}
-					for( j = 16; j < 64; j++ ) {
+					for( size_t j = 16; j < 64; j++ ) {
 						w[j] = impl::SHA256_F4( w[j - 2] ) + w[j - 7] + impl::SHA256_F3( w[j - 15] ) + w[j - 16];
 					}
-					for( j = 0; j < 8; j++ ) {
+					for( size_t j = 0; j < 8; j++ ) {
 						wv[j] = m_h[j];
 					}
-					for( j = 0; j < 64; j++ ) {
+					for( size_t j = 0; j < 64; j++ ) {
 						t1 = wv[7] + impl::SHA256_F2( wv[4] ) + impl::SHA2_CH( wv[4], wv[5], wv[6] ) + sha256_k[j] +
 						     w[j];
 						t2 = impl::SHA256_F1( wv[0] ) + impl::SHA2_MAJ( wv[0], wv[1], wv[2] );
@@ -173,14 +234,14 @@ namespace daw {
 						wv[1] = wv[0];
 						wv[0] = t1 + t2;
 					}
-					for( j = 0; j < 8; j++ ) {
+					for( size_t j = 0; j < 8; j++ ) {
 						m_h[j] += wv[j];
 					}
 				}
 			}
 
 			template<typename U, size_t N>
-			constexpr void transform( std::array<U, N> const &message, size_t const block_nb ) noexcept {
+			constexpr void transform( daw::array_t<U, N> const &message, size_t const block_nb ) noexcept {
 				return transform( message.data( ), block_nb );
 			}
 
@@ -200,70 +261,84 @@ namespace daw {
 
 		  public:
 			constexpr sha2_ctx( ) noexcept
-			    : m_tot_len{0}, m_len{0}, m_block{0}, m_h{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+			    : m_tot_len{0}, m_len{0}, m_block{}, m_h{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
 			                                              0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19} {}
+		private:
+			// len cannot be longer than block_size
+			constexpr void update_impl( byte_t const *message, size_t const len ) noexcept {
+				size_t const tmp_len = block_size - m_len;
+				size_t rem_len = len < tmp_len ? len : tmp_len;
 
-			constexpr void update_impl( uint8_t const *message, uint32_t const len ) noexcept {
-				assert( len <= block_size );
-				word_t block_nb = 0;
-				word_t new_len = 0;
-				word_t rem_len = 0;
-				word_t tmp_len = 0;
-				uint8_t const *shifted_message = nullptr;
-				tmp_len = block_size - m_len;
-				rem_len = len < tmp_len ? len : tmp_len;
-				copy_values( message, rem_len, &m_block[m_len] );
+				// fill block buffer with message data
+				m_block.push_back( message, rem_len );
+				//copy_values( message, rem_len, &m_block[m_len] );
 				if( m_len + len < block_size ) {
 					m_len += len;
 					return;
 				}
-				new_len = len - rem_len;
-				block_nb = new_len / block_size;
-				shifted_message = message + rem_len;
+
+				size_t const new_len = len - rem_len;
+				size_t const block_nb = new_len / block_size;
+				byte_t const * shifted_message = message + rem_len;
+
 				transform( m_block.data( ), 1u );
 				transform( shifted_message, block_nb );
 				rem_len = new_len % block_size;
-				copy_values( &shifted_message[block_nb * 64u], rem_len, m_block.data( ) );
+
+				m_block.clear( );
+				m_block.push_back( &shifted_message[block_nb * 64u], rem_len );
+				//copy_values( &shifted_message[block_nb * 64u], rem_len, m_block.data( ) );
 				m_len = rem_len;
 				m_tot_len += ( block_nb + 1u ) * 64u;
 			}
-
-			constexpr void update( T const *message, size_t len ) noexcept {
-				auto ptr = static_cast<uint8_t const *>( static_cast<void const *>( message ) );
-				len *= sizeof( T );
-				while( len > 0 ) {
-					auto const sz = static_cast<uint32_t>( std::min( block_size, len ) );
-					update_impl( ptr, sz );
-					if( sz <= len ) {
-						ptr += sz;
-						len -= sz;
-					}
+		
+		public:
+			template<typename CharT>
+			constexpr void update( CharT const *message, size_t len ) noexcept {
+				auto msg = daw::make_array_view( static_cast<byte_t const *>( static_cast<void const *>( message ) ),
+				                                 len * sizeof( CharT ) );
+				while( msg.size( ) > block_size ) {
+					update_impl( msg.data( ), block_size );
+					msg.remove_prefix( block_size );
 				}
+				update_impl( msg.data( ), msg.size( ) );
 			}
 
-			constexpr digest_t create_digest( ) noexcept {
-				return digest_t{ };
+			constexpr sha256_digest_t create_digest( ) noexcept {
+				return sha256_digest_t{ };
 			}
 
-			constexpr void final( digest_t & digest ) noexcept {
-				word_t const block_nb = 1 + (( ( block_size - 9u ) < ( m_len % block_size ) ) ? 1 : 0);
+		  private:
+			constexpr void final_padding( ) noexcept {
+
+
+			}
+		  public:
+			constexpr void final( sha256_digest_t & digest ) noexcept {
+				size_t const block_nb = 1 + (( ( block_size - 9u ) < ( m_len % block_size ) ) ? 1 : 0);
 				auto const len_b = static_cast<word_t>(( m_tot_len + m_len ) * 8u);
-				word_t const pm_len = block_nb * 64u;
-				fill_values( &m_block[m_len], pm_len - m_len, static_cast<uint8_t>(0) );
+				size_t const pm_len = block_nb * 64u;
+
+				fill_values( &m_block[m_len], pm_len - m_len, static_cast<byte_t>(0) );
+
 				m_block[m_len] = 0x80u;
-				impl::SHA2_UNPACK32( len_b, m_block.data( ) + pm_len - 4u );
+
+				impl::SHA2_UNPACK32( len_b, &m_block[pm_len - 4u] );
+
 				transform( m_block.data( ), block_nb );
 				for( size_t i = 0; i < 8; i++ ) {
-					impl::SHA2_UNPACK32( m_h[i], &digest.data[i * 4u] );
+					impl::SHA2_UNPACK32( m_h[i], &digest[i * 4u] );
 				}
 			}
 
-			constexpr digest_t final( ) noexcept {
-				digest_t digest{};
+			constexpr sha256_digest_t final( ) noexcept {
+				sha256_digest_t digest{};
 				final( digest );
 				return digest;
 			}
 		};
+
+		using sha256_ctx = sha2_ctx<256, unsigned char>;
 
 		template<typename T = char>
 		constexpr auto sha256_bin( daw::array_view<T> view ) noexcept {
@@ -279,14 +354,14 @@ namespace daw {
 		template<typename Container>
 		constexpr auto sha256_bin( Container const &container ) noexcept {
 			return sha256_bin(
-			    daw::make_array_view( reinterpret_cast<uint8_t const *>( &( *std::cbegin( container ) ) ),
-			                          reinterpret_cast<uint8_t const *>( &( *std::cend( container ) ) ) ) );
+			    daw::make_array_view( reinterpret_cast<sha256_ctx::byte_t const *>( &( *std::cbegin( container ) ) ),
+			                          reinterpret_cast<sha256_ctx::byte_t const *>( &( *std::cend( container ) ) ) ) );
 		}
 
 		template<typename Iterator>
 		constexpr auto sha256_bin( Iterator const first, Iterator const last ) noexcept {
-			return sha256_bin( daw::make_array_view( reinterpret_cast<uint8_t const *>( &( *first ) ),
-			                                         reinterpret_cast<uint8_t const *>( &( *last ) ) ) );
+			return sha256_bin( daw::make_array_view( reinterpret_cast<sha256_ctx::byte_t const *>( &( *first ) ),
+			                                         reinterpret_cast<sha256_ctx::byte_t const *>( &( *last ) ) ) );
 		}
 
 		template<typename String>
