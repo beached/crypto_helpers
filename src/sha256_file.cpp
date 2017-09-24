@@ -26,6 +26,7 @@
 #include <iostream>
 
 #include <daw/daw_memory_mapped_file.h>
+#include <daw/daw_stack_array.h>
 #include <daw/daw_string_view.h>
 
 #include "sha256.h"
@@ -35,7 +36,7 @@ namespace {
 	void do_sha256( GetData get_data, daw::string_view sv ) {
 		using namespace daw::crypto;
 		sha2_ctx<256, char> ctx{};
-		std::array<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
+		daw::array_t<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
 		std::streamsize count = 0;
 		auto is_good = get_data( buffer, count );
 		while( count > 0 ) {
@@ -80,4 +81,3 @@ int main( int argc, char **argv ) {
 	}
 	return EXIT_SUCCESS;
 }
-
