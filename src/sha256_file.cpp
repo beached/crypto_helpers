@@ -32,22 +32,16 @@
 #include "sha256.h"
 
 namespace {
-	template<typename GetData>
-	void do_sha256( GetData get_data, daw::string_view sv ) {
-		using namespace daw::crypto;
-		sha2_ctx<256, char> ctx{};
-		daw::array_t<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
-		std::streamsize count = 0;
-		auto is_good = get_data( buffer, count );
-		while( count > 0 ) {
-			ctx.update( buffer.data( ), static_cast<uint32_t>( count ) );
-			if( !is_good ) {
-				break;
-			}
-			is_good = get_data( buffer, count );
+	void do_console( ) noexcept {
+		std::ios_base::sync_with_stdio( false );
+		daw::crypto::sha256_ctx ctx{};
+		daw::array_t<unsigned char, 1024> buffer = {0};
+		char *io_ptr = reinterpret_cast<char *>( buffer.data( ) );
+		std::streamsize read_count = 0;
+		while( std::cin.good( ) && ( read_count = std::cin.readsome( io_ptr, static_cast<std::streamsize>( buffer.size( ) ) ) ) > 0 ) {
+			ctx.update( buffer.data( ), static_cast<size_t>( read_count ) );
 		}
-		auto const digest = ctx.final( );
-		std::cout << digest.to_hex_string( ) << "  " << sv << '\n';
+		std::cout << ctx.final( ).to_hex_string( ) << "  -\n";
 	}
 
 	void do_file( daw::string_view file_name ) noexcept {
@@ -66,18 +60,7 @@ int main( int argc, char **argv ) {
 	if( argc > 1 ) {
 		do_file( argv[1] );
 	} else {
-		do_sha256(
-		    []( auto &buffer, auto &count ) {
-			    std::istream_iterator<char> first{std::cin};
-			    std::istream_iterator<char> last{};
-			    size_t n = 0;
-			    for( ; n < buffer.size( ) && first != last; ++n, ++first ) {
-				    buffer[n] = *first;
-			    }
-			    count = static_cast<std::streamsize>( n );
-			    return static_cast<bool>( std::cin );
-		    },
-		    "-" );
+		do_console( );
 	}
 	return EXIT_SUCCESS;
 }
