@@ -215,7 +215,7 @@ namespace daw {
 				{
 					auto message_view = daw::make_array_view( m_message_block.data( ), m_message_block.size( ) );
 					for( size_t i = 0; i < 16; ++i ) {
-						w[i] = impl::to_uint32_be( m_message_block.data( ) );
+						w[i] = impl::to_uint32_be( message_view.data( ) );
 						message_view.remove_prefix( 4 );
 					}
 				}
@@ -314,7 +314,7 @@ namespace daw {
 				transform( );
 
 				for( size_t i = 0; i < digest.size( ); ++i ) {
-					digest[i] = impl::from_uint32_be( m_state[i] );
+					digest[i] = m_state[i];
 				}
 			}
 

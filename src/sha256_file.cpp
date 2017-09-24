@@ -50,19 +50,12 @@ void do_sha256( GetData get_data, daw::string_view sv ) {
 }
 
 void do_file( daw::string_view file_name ) noexcept {
-	std::ifstream in_file{file_name.data( )};
-	if( !in_file ) {
+	daw::filesystem::memory_mapped_file_t<unsigned char> mmf{ file_name };
+	if( !mmf ) {
 		std::cerr << "Could not open file '" << file_name << "'\n";
 		exit( EXIT_FAILURE );
 	}
-	daw::array_t<char, 1024> buffer;
-	std::streamsize num_read = 0;
-	daw::crypto::sha256_ctx ctx{};
-	while( in_file && ( num_read = in_file.readsome( buffer.data( ), buffer.size( ) ) ) > 0 ) {
-		ctx.update( buffer.data( ), buffer.size( ) );
-	}
-	auto const digest = ctx.final( );
-	std::cout << digest.to_hex_string( ) << "  " << file_name << '\n';
+	std::cout << daw::crypto::sha256( mmf ) << " " << file_name << '\n';
 }
 
 int main( int argc, char **argv ) {
