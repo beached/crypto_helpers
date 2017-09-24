@@ -329,8 +329,8 @@ namespace daw {
 
 		using sha256_ctx = sha2_ctx<256, unsigned char>;
 
-		template<typename CharT=char>
-		sha256_digest_t sha256_bin( std::string const & str ) noexcept {
+		template<typename CharT = char>
+		sha256_digest_t sha256_bin( std::string const &str ) noexcept {
 			sha2_ctx<256, CharT> ctx{};
 			ctx.update( str.data( ), str.size( ) );
 			return ctx.final( );
@@ -343,8 +343,8 @@ namespace daw {
 			return ctx.final( );
 		}
 
-		template<typename CharT=char>
-		std::string sha256( std::string const & str ) noexcept {
+		template<typename CharT = char>
+		std::string sha256( std::string const &str ) noexcept {
 			return sha256_bin<CharT>( str ).to_hex_string( );
 		}
 

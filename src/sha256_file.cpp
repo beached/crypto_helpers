@@ -59,7 +59,7 @@ namespace {
 		ctx.update( daw::make_array_view( mmf.data( ), mmf.size( ) ) );
 		std::cout << ctx.final( ).to_hex_string( ) << " " << file_name << '\n';
 	}
-}
+} // namespace
 
 int main( int argc, char **argv ) {
 	if( argc > 1 ) {
