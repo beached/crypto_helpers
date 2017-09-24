@@ -191,7 +191,7 @@ namespace daw {
 		template<typename T>
 		struct sha2_ctx<256, T> {
 			using word_t = uint32_t;
-			using byte_t = uint8_t;
+			using byte_t = unsigned char;
 			static constexpr size_t const block_size_bytes = 64; // 512 bits
 			static constexpr size_t const digest_size = 8;      // 256/(32bit wordsize) bits
 
@@ -215,7 +215,8 @@ namespace daw {
 				{
 					auto message_view = daw::make_array_view( m_message_block.data( ), m_message_block.size( ) );
 					for( size_t i = 0; i < 16; ++i ) {
-						w[i] = impl::to_uint32_be( message_view.data( ) );
+						w[i] = impl::to_uint32_be(
+						    static_cast<uint8_t const *>( static_cast<void const *>( message_view.data( ) ) ) );
 						message_view.remove_prefix( 4 );
 					}
 				}
@@ -263,16 +264,37 @@ namespace daw {
 				m_message_block.clear( );
 			}
 
-			// len cannot be longer than block_size_bytes
 			constexpr void update_impl( daw::array_view<byte_t> view ) noexcept {
+				size_t push_size = 1;
+				m_message_size += view.size( )*8;
 				while( !view.empty( ) ) {
-					auto const how_much = view.size( ) <= m_message_block.available( ) ? view.size( ) : m_message_block.available( );
-					m_message_block.push_back( view.data( ), how_much );
-					view.remove_prefix( how_much );
+					push_size = std::min( view.size( ), m_message_block.available( ) );
+					m_message_block.push_back( view.data( ), push_size );
 					if( m_message_block.full( ) ) {
-						m_message_size += m_message_block.size( )*8;
 						transform( );
 					}
+					view.remove_prefix( push_size );
+				}
+			}
+
+			constexpr void update_impl( byte_t const * first, byte_t const * last ) noexcept {
+				auto view = daw::make_array_view( first, last );
+				update_impl( view );
+			}
+
+			template<typename Iterator>
+			constexpr void update_impl( Iterator first, Iterator last ) noexcept {
+				size_t const value_size = sizeof( decltype( *first ) );
+				m_message_size += static_cast<size_t>( std::distance( first, last ) ) * value_size * 8;
+				while( first != last ) {
+					auto ptr = static_cast<byte_t const *>( static_cast<void const *>( &( *first ) ) );
+					for( size_t n=0; n<value_size; ++n ) {
+						m_message_block.push_back( ptr[n] );
+						if( m_message_block.full( ) ) {
+							transform( );
+						}
+					}
+					++first;
 				}
 			}
 
@@ -291,10 +313,22 @@ namespace daw {
 			}
 
 		  public:
-			template<typename CharT>
-			constexpr void update( CharT const *message, size_t len ) noexcept {
-				update_impl( daw::make_array_view( static_cast<byte_t const *>( static_cast<void const *>( message ) ),
-				                                   len * sizeof( CharT ) ) );
+			constexpr void update( T const *message, size_t len ) noexcept {
+				auto view =
+				    daw::make_array_view( static_cast<byte_t const *>( static_cast<void const *>( message ) ), len );
+				update_impl( view );
+			}
+
+			template<size_t N>
+			constexpr void update( T const (&ptr)[N] ) noexcept {
+				auto view =
+				    daw::make_array_view( static_cast<byte_t const *>( static_cast<void const *>( ptr ) ), N - 1 );
+				update_impl( view );
+			}
+
+			template<typename Iterator>
+			constexpr void update( Iterator first, Iterator last ) noexcept {
+				update_impl( first, last );
 			}
 
 			static constexpr sha256_digest_t create_digest( ) noexcept {
@@ -309,7 +343,8 @@ namespace daw {
 				while( !m_message_block.full( ) ) {
 					m_message_block.push_back( 0 );
 				}
-				impl::to_uint64_be( size_begin, m_message_size );
+				impl::to_uint64_be( static_cast<uint8_t *>( static_cast<void *>( size_begin ) ),
+				                    m_message_size );
 
 				transform( );
 
@@ -327,40 +362,32 @@ namespace daw {
 
 		using sha256_ctx = sha2_ctx<256, unsigned char>;
 
-		template<typename T>
-		constexpr auto sha256_bin( daw::array_view<T> view ) noexcept {
-			sha256_ctx ctx{};
-			while( view.size( ) > ctx.block_size_bytes ) {
-				ctx.update( view.data( ), ctx.block_size_bytes );
-				view.remove_prefix( ctx.block_size_bytes );
-			}
-			ctx.update( view.data( ), static_cast<uint32_t>( view.size( ) ) );
+		template<typename Container>
+		constexpr auto sha256_bin( Container const &container ) noexcept {
+			sha256_ctx ctx{ };
+			ctx.update( std::cbegin( container ), std::cend( container ) );
 			return ctx.final( );
 		}
 
-		template<typename Container>
-		constexpr auto sha256_bin( Container const &container ) noexcept {
-			return sha256_bin(
-			    daw::make_array_view( reinterpret_cast<sha256_ctx::byte_t const *>( &( *std::cbegin( container ) ) ),
-			                          reinterpret_cast<sha256_ctx::byte_t const *>( &( *std::cend( container ) ) ) ) );
-		}
-
-		template<typename Iterator>
+		template<typename CharT=unsigned char, typename Iterator>
 		constexpr auto sha256_bin( Iterator const first, Iterator const last ) noexcept {
-			return sha256_bin( daw::make_array_view( reinterpret_cast<sha256_ctx::byte_t const *>( &( *first ) ),
-			                                         reinterpret_cast<sha256_ctx::byte_t const *>( &( *last ) ) ) );
-		}
-
-		template<typename String>
-		std::string sha256( String const &str ) noexcept {
-			return sha256_bin( std::cbegin( str ), std::cend( str ) ).to_hex_string( );
+			sha2_ctx<256, CharT> ctx{ };
+			ctx.update( first, last );
+			return ctx.final( );
 		}
 
 		template<typename CharT, size_t N>
-		std::string sha256( CharT const ( &s )[N] ) noexcept {
-			return sha256_bin( s, s + N - 1 ).to_hex_string( );
+		constexpr auto sha256_bin( CharT const ( &s )[N] ) noexcept {
+			daw::string_view view{ static_cast<char const *>( static_cast<void const *>( s )), N-1 };
+			sha256_ctx ctx{ };
+			ctx.update( view.cbegin( ), view.cend( ) );
+			return ctx.final( );
 		}
 
+		template<typename... Args>
+		std::string sha256( Args&&... args ) noexcept {
+			return sha256_bin( std::forward<Args>( args )... ).to_hex_string( );
+		}
 	} // namespace crypto
 } // namespace daw
 

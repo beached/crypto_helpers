@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE( sha256_001 ) {
 
 BOOST_AUTO_TEST_CASE( sha256_002 ) {
 	daw::string_view test_str = "hello";
-	auto const digest = sha256_bin( test_str.cbegin( ), test_str.cend( ) );
+	auto const digest = sha256_bin<char>( test_str.cbegin( ), test_str.cend( ) );
 	std::array<uint32_t, sha256_ctx::digest_size> const expected_output = {
 	    0x2cf24dba, 0x5fb0a30e, 0x26e83b2a, 0xc5b9e29e, 0x1b161e5c, 0x1fa7425e, 0x73043362, 0x938b9824};
 

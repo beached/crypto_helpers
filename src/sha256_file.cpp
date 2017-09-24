@@ -32,7 +32,6 @@
 
 template<typename GetData>
 void do_sha256( GetData get_data, daw::string_view sv ) {
-	assert( istr );
 	using namespace daw::crypto;
 	sha2_ctx<256, char> ctx{};
 	std::array<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
@@ -50,7 +49,7 @@ void do_sha256( GetData get_data, daw::string_view sv ) {
 }
 
 void do_file( daw::string_view file_name ) noexcept {
-	daw::filesystem::memory_mapped_file_t<unsigned char> mmf{ file_name };
+	daw::filesystem::memory_mapped_file_t<uint8_t> mmf{ file_name };
 	if( !mmf ) {
 		std::cerr << "Could not open file '" << file_name << "'\n";
 		exit( EXIT_FAILURE );
