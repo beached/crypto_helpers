@@ -67,10 +67,9 @@ target_link_libraries( sha256_test_bin ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_IN
 add_dependencies( sha256_test_bin header_libraries_prj )
 add_test( sha256_test sha256_test_bin )
 
-add_executable( sha256sum ${HEADER_FILES} ${SOURCE_FOLDER}/sha256_file.cpp )
+add_executable( sha256sum ${HEADER_FILES} ${SOURCE_FOLDER}/sha256sum.cpp )
 target_link_libraries( sha256sum ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( sha256sum header_libraries_prj )
 
-#install( TARGETS crypto_lib DESTINATION lib )
 install( DIRECTORY ${HEADER_FOLDER}/ DESTINATION include/daw/crypto )
 
