@@ -54,7 +54,9 @@ void do_file( daw::string_view file_name ) noexcept {
 		std::cerr << "Could not open file '" << file_name << "'\n";
 		exit( EXIT_FAILURE );
 	}
-	std::cout << daw::crypto::sha256( mmf ) << " " << file_name << '\n';
+	daw::crypto::sha256_ctx ctx{};
+	ctx.update( daw::make_array_view( mmf.data( ), mmf.size( ) ) );
+	std::cout << ctx.final( ).to_hex_string( ) << " " << file_name << '\n';
 }
 
 int main( int argc, char **argv ) {
