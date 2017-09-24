@@ -35,7 +35,7 @@ void do_sha256( GetData get_data, daw::string_view sv ) {
 	assert( istr );
 	using namespace daw::crypto;
 	sha2_ctx<256, char> ctx{};
-	std::array<char, sha2_ctx<256, char>::block_size / 2> buffer = {0};
+	std::array<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
 	std::streamsize count = 0;
 	auto is_good = get_data( buffer, count );
 	while( count > 0 ) {
@@ -45,33 +45,43 @@ void do_sha256( GetData get_data, daw::string_view sv ) {
 		}
 		is_good = get_data( buffer, count );
 	}
-	auto digest = ctx.final( );
+	auto const digest = ctx.final( );
 	std::cout << digest.to_hex_string( ) << "  " << sv << '\n';
+}
+
+void do_file( daw::string_view file_name ) noexcept {
+	std::ifstream in_file{file_name.data( )};
+	if( !in_file ) {
+		std::cerr << "Could not open file '" << file_name << "'\n";
+		exit( EXIT_FAILURE );
+	}
+	daw::array_t<char, 1024> buffer;
+	std::streamsize num_read = 0;
+	daw::crypto::sha256_ctx ctx{};
+	while( in_file && ( num_read = in_file.readsome( buffer.data( ), buffer.size( ) ) ) > 0 ) {
+		ctx.update( buffer.data( ), buffer.size( ) );
+	}
+	auto const digest = ctx.final( );
+	std::cout << digest.to_hex_string( ) << "  " << file_name << '\n';
 }
 
 int main( int argc, char **argv ) {
 	if( argc > 1 ) {
-		daw::filesystem::memory_mapped_file_t<uint8_t> const mmf{argv[1]};
-		if( mmf ) {
-			auto const digest = daw::crypto::sha256_bin( daw::array_view<uint8_t>{mmf.data( ), mmf.size( )} );
-			std::cout << digest.to_hex_string( ) << " " << argv[1] << '\n';
-			return EXIT_SUCCESS;
-		}
-		std::cerr << "Could not open file '" << argv[1] << "'\n";
-		return EXIT_FAILURE;
+		do_file( argv[1] );
+	} else {
+		do_sha256(
+		    []( auto &buffer, auto &count ) {
+			    std::istream_iterator<char> first{std::cin};
+			    std::istream_iterator<char> last{};
+			    size_t n = 0;
+			    for( ; n < buffer.size( ) && first != last; ++n, ++first ) {
+				    buffer[n] = *first;
+			    }
+			    count = static_cast<std::streamsize>( n );
+			    return static_cast<bool>( std::cin );
+		    },
+		    "-" );
 	}
-	do_sha256(
-	    []( auto &buffer, auto &count ) {
-		    std::istream_iterator<char> first{std::cin};
-		    std::istream_iterator<char> last{};
-			size_t n=0;
-			for( ; n<buffer.size( ) && first != last; ++n, ++first ) {
-				buffer[n] = *first;
-			}
-		    count = static_cast<std::streamsize>( n );
-		    return static_cast<bool>(std::cin);
-	    },
-	    "-" );
 	return EXIT_SUCCESS;
 }
 

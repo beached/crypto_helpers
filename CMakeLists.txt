@@ -9,6 +9,14 @@ find_package( Boost 1.58.0 COMPONENTS system iostreams filesystem regex unit_tes
 enable_testing( )
 add_definitions( -DBOOST_ALL_NO_LIB ) 
 
+include (TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+if(IS_BIG_ENDIAN)
+	add_definitions( -DENDIAN_BIG )
+else()
+	add_definitions( -DENDIAN_LITTLE )
+endif()
+
 find_package( Threads REQUIRED )
 
 if( ${CMAKE_CXX_COMPILER_ID} STREQUAL 'MSVC' )
