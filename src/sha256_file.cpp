@@ -30,33 +30,35 @@
 
 #include "sha256.h"
 
-template<typename GetData>
-void do_sha256( GetData get_data, daw::string_view sv ) {
-	using namespace daw::crypto;
-	sha2_ctx<256, char> ctx{};
-	std::array<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
-	std::streamsize count = 0;
-	auto is_good = get_data( buffer, count );
-	while( count > 0 ) {
-		ctx.update( buffer.data( ), static_cast<uint32_t>( count ) );
-		if( !is_good ) {
-			break;
+namespace {
+	template<typename GetData>
+	void do_sha256( GetData get_data, daw::string_view sv ) {
+		using namespace daw::crypto;
+		sha2_ctx<256, char> ctx{};
+		std::array<char, sha256_ctx::block_size_bytes / 2> buffer = {0};
+		std::streamsize count = 0;
+		auto is_good = get_data( buffer, count );
+		while( count > 0 ) {
+			ctx.update( buffer.data( ), static_cast<uint32_t>( count ) );
+			if( !is_good ) {
+				break;
+			}
+			is_good = get_data( buffer, count );
 		}
-		is_good = get_data( buffer, count );
+		auto const digest = ctx.final( );
+		std::cout << digest.to_hex_string( ) << "  " << sv << '\n';
 	}
-	auto const digest = ctx.final( );
-	std::cout << digest.to_hex_string( ) << "  " << sv << '\n';
-}
 
-void do_file( daw::string_view file_name ) noexcept {
-	daw::filesystem::memory_mapped_file_t<uint8_t> mmf{ file_name };
-	if( !mmf ) {
-		std::cerr << "Could not open file '" << file_name << "'\n";
-		exit( EXIT_FAILURE );
+	void do_file( daw::string_view file_name ) noexcept {
+		daw::filesystem::memory_mapped_file_t<uint8_t> mmf{file_name};
+		if( !mmf ) {
+			std::cerr << "Could not open file '" << file_name << "'\n";
+			exit( EXIT_FAILURE );
+		}
+		daw::crypto::sha256_ctx ctx{};
+		ctx.update( daw::make_array_view( mmf.data( ), mmf.size( ) ) );
+		std::cout << ctx.final( ).to_hex_string( ) << " " << file_name << '\n';
 	}
-	daw::crypto::sha256_ctx ctx{};
-	ctx.update( daw::make_array_view( mmf.data( ), mmf.size( ) ) );
-	std::cout << ctx.final( ).to_hex_string( ) << " " << file_name << '\n';
 }
 
 int main( int argc, char **argv ) {

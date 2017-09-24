@@ -79,22 +79,9 @@ namespace daw {
 			}
 
 #ifdef LITTLE_ENDIAN
-
-			constexpr uint32_t from_uint32_be( uint32_t const value ) noexcept {
-				return ( ( value & 0x00'00'00'FF ) << 24u ) | ( ( value & 0x00'00'FF'00 ) << 8u ) |
-				       ( ( value & 0x00'FF'00'00 ) >> 8u ) | ( ( value & 0xFF'00'00'00 ) >> 24u );
-			}
-
 			constexpr uint32_t to_uint32_be( uint8_t const *ptr ) noexcept {
 				return static_cast<uint32_t>( ptr[0] << 24u ) | static_cast<uint32_t>( ptr[1] << 16u ) |
 				       static_cast<uint32_t>( ptr[2] << 8u ) | static_cast<uint32_t>( ptr[3] );
-			}
-
-			constexpr void from_uint32_be( uint8_t *ptr, uint32_t const value ) noexcept {
-				ptr[0] = static_cast<uint8_t>( ( value & 0xFF'00'00'00 ) >> 24u );
-				ptr[1] = static_cast<uint8_t>( ( value & 0x00'FF'00'00 ) >> 16u );
-				ptr[2] = static_cast<uint8_t>( ( value & 0x00'00'FF'00 ) >> 8u );
-				ptr[3] = static_cast<uint8_t>( value & 0x00'00'00'FF );
 			}
 
 			constexpr void to_uint64_be( uint8_t *ptr, uint64_t const value ) noexcept {
@@ -107,22 +94,10 @@ namespace daw {
 				ptr[6] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'00'FF'00 ) >> 8u );
 				ptr[7] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'00'00'FF ) );
 			}
-
 #else
-			constexpr uint32_t to_uint32_be( uint32_t const value ) noexcept {
-				return value;
-			}
-
 			constexpr uint32_t to_uint32_be( uint8_t const *ptr ) noexcept {
 				return static_cast<uint32_t>( ptr[0] ) | static_cast<uint32_t>( ptr[1] << 8 ) |
 				       static_cast<uint32_t>( ptr[2] << 16 ) | static_cast<uint32_t>( ptr[3] << 24 );
-			}
-
-			constexpr void from_uint32_be( uint8_t *ptr, uint32_t const value ) noexcept {
-				ptr[0] = static_cast<uint8_t>( value & 0x00'00'00'FF );
-				ptr[1] = static_cast<uint8_t>( ( value & 0x00'00'FF'00 ) >> 8 );
-				ptr[2] = static_cast<uint8_t>( ( value & 0x00'FF'00'00 ) >> 16 );
-				ptr[3] = static_cast<uint8_t>( ( value & 0xFF'00'00'00 ) >> 24 );
 			}
 
 			constexpr void to_uint64_be( uint8_t *ptr, uint64_t const value ) noexcept {
@@ -276,8 +251,6 @@ namespace daw {
 
 			template<typename Iterator>
 			constexpr void update_impl( Iterator first, Iterator last ) noexcept {
-				size_t push_size = 1;
-				auto const sz = static_cast<size_t>( std::distance( first, last ) );
 				while( first != last ) {
 					m_message_block.push_back( *first++ );
 					if( m_message_block.full( ) ) {
@@ -374,7 +347,6 @@ namespace daw {
 		std::string sha256( std::string const & str ) noexcept {
 			return sha256_bin<CharT>( str ).to_hex_string( );
 		}
-
 
 		template<size_t N>
 		std::string sha256_bin( char const ( &str )[N] ) noexcept {
