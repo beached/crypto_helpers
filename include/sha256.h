@@ -290,7 +290,13 @@ namespace daw {
 			template<typename ArrayView>
 			constexpr void update_impl( ArrayView view ) noexcept {
 				size_t push_size = 1;
-				while( !view.empty( ) ) {
+				while( view.size( ) > m_message_block.capacity( ) ) {
+					push_size = std::min( view.size( ), m_message_block.available( ) );
+					m_message_block.push_back( view.data( ), push_size );
+					transform( );
+					view.remove_prefix( push_size );
+				}
+				if( !view.empty( ) ) {
 					push_size = std::min( view.size( ), m_message_block.available( ) );
 					m_message_block.push_back( view.data( ), push_size );
 					if( m_message_block.full( ) ) {
@@ -308,11 +314,6 @@ namespace daw {
 						transform( );
 					}
 				}
-			}
-
-			constexpr void update_impl( T const *first, T const *last ) noexcept {
-				auto view = daw::make_array_view( first, last );
-				update_impl( view );
 			}
 
 			constexpr void final_padding( ) noexcept {
@@ -336,13 +337,13 @@ namespace daw {
 			}
 
 			template<typename Traits, typename IntIdxType>
-			constexpr void update( daw::basic_string_view<T, Traits, IntIdxType> view ) noexcept {
-				update_impl( view );
+			constexpr void update( daw::basic_string_view<T, Traits, IntIdxType> && view ) noexcept {
+				update_impl( std::forward<daw::basic_string_view<T, Traits, IntIdxType>>( view ) );
 			}
 
 			template<typename U, typename = std::enable_if_t<sizeof( U ) == 1>>
-			constexpr void update( daw::array_view<U> view ) noexcept {
-				update_impl( view );
+			constexpr void update( daw::array_view<U> && view ) noexcept {
+				update_impl( std::forward<daw::array_view<U>>( view ) );
 			}
 
 			template<typename Iterator,
