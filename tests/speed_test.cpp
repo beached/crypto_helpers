@@ -22,8 +22,6 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
-#include <random>
 
 #include <daw/daw_benchmark.h>
 #include <daw/daw_size_literals.h>
@@ -31,17 +29,17 @@
 
 #include "sha256.h"
 
-int main( int, char** ) {
+int main( int, char ** ) {
 	using namespace daw::size_literals;
-	auto const test_data = daw::generate_random_data<uint8_t>( 1_GB );
+	auto const test_data = daw::generate_random_data<uint8_t, int>( 1_GB, 0, 255 );
 	auto view = daw::make_array_view( test_data.data( ), test_data.size( ) );
-	daw::show_benchmark( view.size( ), "test001", [&view]( ) {
-		daw::crypto::sha256_ctx ctx{};
-		ctx.update( view );
-		ctx.final( );
-	}, 2, 2 );
+	daw::show_benchmark( view.size( ), "test001",
+	                     [&view]( ) {
+		                     daw::crypto::sha256_ctx ctx{};
+		                     ctx.update( view );
+		                     ctx.final( );
+	                     },
+	                     2, 2 );
 
 	return EXIT_SUCCESS;
 }
-
-

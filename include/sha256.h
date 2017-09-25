@@ -434,9 +434,8 @@ namespace daw {
 			return daw::crypto::sha256_bin( str, len );
 		}
 
-		std::string operator"" _sha256str( char const *str, size_t len ) {
+		inline std::string operator"" _sha256str( char const *str, size_t len ) {
 			return daw::crypto::sha256_bin( str, len ).to_hex_string( );
 		}
 	} // namespace crypto_literals
 } // namespace daw
-
