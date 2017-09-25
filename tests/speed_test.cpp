@@ -27,24 +27,13 @@
 
 #include <daw/daw_benchmark.h>
 #include <daw/daw_size_literals.h>
+#include <daw/daw_utility.h>
 
 #include "sha256.h"
 
-template<typename Iterator>
-void fill_random( Iterator first, Iterator last ) {
-	std::random_device rnd_device;
-	// Specify the engine and distribution.
-	std::mt19937 mersenne_engine{rnd_device( )};
-	std::uniform_int_distribution<int64_t> dist{0, 255};
-
-	std::generate( first, last, [&]( ) { return dist( mersenne_engine ); } );
-}
-
 int main( int, char** ) {
 	using namespace daw::size_literals;
-	std::vector<uint8_t> test_data;
-	test_data.resize( 1_GB );
-	fill_random( test_data.begin( ), test_data.end( ) );
+	auto const test_data = daw::generate_random_data<uint8_t>( 1_GB );
 	auto view = daw::make_array_view( test_data.data( ), test_data.size( ) );
 	daw::show_benchmark( view.size( ), "test001", [&view]( ) {
 		daw::crypto::sha256_ctx ctx{};
