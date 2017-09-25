@@ -194,7 +194,7 @@ namespace daw {
 			};
 
 			template<typename word_t>
-			constexpr daw::array_t<word_t const, 64> const sha256_k{
+			alignas( 64 ) constexpr daw::array_t<word_t const, 64> const sha256_k{
 			    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
 			    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
 			    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -253,35 +253,35 @@ namespace daw {
 					word_t const s1 = impl::SHA256_SIG1( w[i - 2] );
 					w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 				}
-				struct alignas( 64 ) {
-					word_t a, b, c, d, e, f, g, h, temp1, temp2;
-				} tmp_state{m_state[0], m_state[1], m_state[2], m_state[3], m_state[4],
-				            m_state[5], m_state[6], m_state[7], 0,          0};
+
+				alignas( 64 ) daw::array_t<word_t, 10> tmp_state{m_state[0], m_state[1], m_state[2], m_state[3],
+				                                                 m_state[4], m_state[5], m_state[6], m_state[7],
+				                                                 0,          0};
 
 				for( size_t i = 0; i < 64; ++i ) {
-					tmp_state.temp1 = tmp_state.h + impl::SHA256_EP1( tmp_state.e ) +
-					                  impl::SHA256_CH( tmp_state.e, tmp_state.f, tmp_state.g ) +
-					                  impl::sha256_k<word_t>[i] + w[i];
-					tmp_state.temp2 =
-					    impl::SHA256_EP0( tmp_state.a ) + impl::SHA256_MAJ( tmp_state.a, tmp_state.b, tmp_state.c );
-					tmp_state.h = tmp_state.g;
-					tmp_state.g = tmp_state.f;
-					tmp_state.f = tmp_state.e;
-					tmp_state.e = tmp_state.d + tmp_state.temp1;
-					tmp_state.d = tmp_state.c;
-					tmp_state.c = tmp_state.b;
-					tmp_state.b = tmp_state.a;
-					tmp_state.a = tmp_state.temp1 + tmp_state.temp2;
+					tmp_state[8] = tmp_state[7] + impl::SHA256_EP1( tmp_state[4] ) +
+					               impl::SHA256_CH( tmp_state[4], tmp_state[5], tmp_state[6] ) +
+					               impl::sha256_k<word_t>[i] + w[i];
+					tmp_state[9] =
+					    impl::SHA256_EP0( tmp_state[0] ) + impl::SHA256_MAJ( tmp_state[0], tmp_state[1], tmp_state[2] );
+					tmp_state[7] = tmp_state[6];
+					tmp_state[6] = tmp_state[5];
+					tmp_state[5] = tmp_state[4];
+					tmp_state[4] = tmp_state[3] + tmp_state[8];
+					tmp_state[3] = tmp_state[2];
+					tmp_state[2] = tmp_state[1];
+					tmp_state[1] = tmp_state[0];
+					tmp_state[0] = tmp_state[8] + tmp_state[9];
 				}
 
-				m_state[0] += tmp_state.a;
-				m_state[1] += tmp_state.b;
-				m_state[2] += tmp_state.c;
-				m_state[3] += tmp_state.d;
-				m_state[4] += tmp_state.e;
-				m_state[5] += tmp_state.f;
-				m_state[6] += tmp_state.g;
-				m_state[7] += tmp_state.h;
+				m_state[0] += tmp_state[0];
+				m_state[1] += tmp_state[1];
+				m_state[2] += tmp_state[2];
+				m_state[3] += tmp_state[3];
+				m_state[4] += tmp_state[4];
+				m_state[5] += tmp_state[5];
+				m_state[6] += tmp_state[6];
+				m_state[7] += tmp_state[7];
 
 				m_message_size += m_message_block.capacity( ) * 8;
 				m_message_block.clear( );
