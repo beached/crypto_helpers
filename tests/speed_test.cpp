@@ -39,7 +39,7 @@ int main( int, char** ) {
 		daw::crypto::sha256_ctx ctx{};
 		ctx.update( view );
 		ctx.final( );
-	} );
+	}, 2, 2 );
 
 	return EXIT_SUCCESS;
 }
