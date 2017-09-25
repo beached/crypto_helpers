@@ -337,13 +337,13 @@ namespace daw {
 			}
 
 			template<typename Traits, typename IntIdxType>
-			constexpr void update( daw::basic_string_view<T, Traits, IntIdxType> && view ) noexcept {
-				update_impl( std::forward<daw::basic_string_view<T, Traits, IntIdxType>>( view ) );
+			constexpr void update( daw::basic_string_view<T, Traits, IntIdxType> view ) noexcept {
+				update_impl( std::move( view ) );
 			}
 
 			template<typename U, typename = std::enable_if_t<sizeof( U ) == 1>>
-			constexpr void update( daw::array_view<U> && view ) noexcept {
-				update_impl( std::forward<daw::array_view<U>>( view ) );
+			constexpr void update( daw::array_view<U> view ) noexcept {
+				update_impl( std::move( view ) );
 			}
 
 			template<typename Iterator,

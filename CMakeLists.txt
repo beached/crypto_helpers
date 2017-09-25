@@ -70,7 +70,12 @@ add_dependencies( sha256sum header_libraries_prj )
 add_executable( constexpr ${HEADER_FILES} ${TEST_FOLDER}/constexpr.cpp )
 target_link_libraries( constexpr ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( constexpr header_libraries_prj )
+add_test( constexpr_test constexpr )
 
+add_executable( speed_test ${HEADER_FILES} ${TEST_FOLDER}/speed_test.cpp )
+target_link_libraries( speed_test ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
+add_dependencies( speed_test header_libraries_prj )
+add_test( speed_test_test speed_test )
 
 install( DIRECTORY ${HEADER_FOLDER}/ DESTINATION include/daw/crypto )
 
