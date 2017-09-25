@@ -147,22 +147,21 @@ namespace daw {
 					return data[pos];
 				}
 
-				constexpr bool operator==( digest_t const & rhs ) noexcept {
+				constexpr bool operator==( digest_t const &rhs ) noexcept {
 					return std::equal( data.cbegin( ), data.cend( ), rhs.data.cbegin( ), rhs.data.cend( ) );
 				}
 
 				constexpr bool operator!=( digest_t const &rhs ) noexcept {
 					bool is_not_equal = true;
-					for( size_t n=0; n<digest_size; ++n ) {
+					for( size_t n = 0; n < digest_size; ++n ) {
 						is_not_equal &= data[n] != rhs.data[n];
 					}
 					return is_not_equal;
 				}
 
-
-				constexpr bool operator<( digest_t const & rhs ) noexcept {
+				constexpr bool operator<( digest_t const &rhs ) noexcept {
 					bool is_less = true;
-					for( size_t n=0; n<digest_size; ++n ) {
+					for( size_t n = 0; n < digest_size; ++n ) {
 						is_less &= data[n] < rhs.data[n];
 					}
 					return is_less;
@@ -170,15 +169,15 @@ namespace daw {
 
 				constexpr bool operator>( digest_t const &rhs ) noexcept {
 					bool is_greater = true;
-					for( size_t n=0; n<digest_size; ++n ) {
+					for( size_t n = 0; n < digest_size; ++n ) {
 						is_greater &= data[n] > rhs.data[n];
 					}
 					return is_greater;
 				}
 
-				constexpr bool operator<=( digest_t const & rhs ) noexcept {
+				constexpr bool operator<=( digest_t const &rhs ) noexcept {
 					bool is_less_equal = true;
-					for( size_t n=0; n<digest_size; ++n ) {
+					for( size_t n = 0; n < digest_size; ++n ) {
 						is_less_equal &= data[n] <= rhs.data[n];
 					}
 					return is_less_equal;
@@ -186,7 +185,7 @@ namespace daw {
 
 				constexpr bool operator>=( digest_t const &rhs ) noexcept {
 					bool is_greater_equal = true;
-					for( size_t n=0; n<digest_size; ++n ) {
+					for( size_t n = 0; n < digest_size; ++n ) {
 						is_greater_equal &= data[n] >= rhs.data[n];
 					}
 					return is_greater_equal;
@@ -429,16 +428,15 @@ namespace daw {
 				}
 				return ( c - 10 ) + 'a';
 			}
-		}
+		} // namespace impl
 
-		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) {	
+		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) {
 			return daw::crypto::sha256_bin( str, len );
 		}
 
 		std::string operator"" _sha256str( char const *str, size_t len ) {
 			return daw::crypto::sha256_bin( str, len ).to_hex_string( );
 		}
-	}
+	} // namespace crypto_literals
 } // namespace daw
-
 
