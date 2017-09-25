@@ -20,21 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <iostream>
+
 #include "sha256.h"
 
-constexpr int sum( ) noexcept {
-	auto const digest = daw::crypto::sha256_bin( "" );
+constexpr auto sum( ) noexcept {
+	auto const digest = daw::crypto::sha256_bin( "hello" );
 	size_t sum = 0;
-	for( size_t n=0; n<digest.size( ); n++ ) {
+	for( size_t n = 0; n < digest.size( ); n++ ) {
 		sum += digest[n];
 	}
-	return static_cast<int>(sum);
+	return static_cast<size_t>( sum );
 }
 
-int main( int, char** ) noexcept {
-	constexpr int x{sum( )};
+template<size_t N>
+void output( ) {
+	std::cout << N << '\n';
+}
 
+int main( int, char ** ) noexcept {
+	constexpr int x{static_cast<int>( sum( ) )};
+	output<sum( )>( );
 	return x;
 }
-
 
