@@ -98,3 +98,7 @@ BOOST_AUTO_TEST_CASE( sha256_011 ) {
 	BOOST_REQUIRE_EQUAL( sha256( tst.data( ), tst.size( ) ), "50e72a0e26442fe2552dc3938ac58658228c0cbfb1d2ca872ae435266fcd055e" );
 }
 
+BOOST_AUTO_TEST_CASE( sha256_012 ) {
+	using namespace daw::crypto_literals;
+	BOOST_REQUIRE_EQUAL( ""_sha256.to_hex_string( ), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" );
+}

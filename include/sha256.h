@@ -146,6 +146,51 @@ namespace daw {
 				constexpr const_reference operator[]( size_t pos ) const noexcept {
 					return data[pos];
 				}
+
+				constexpr bool operator==( digest_t const & rhs ) noexcept {
+					return std::equal( data.cbegin( ), data.cend( ), rhs.data.cbegin( ), rhs.data.cend( ) );
+				}
+
+				constexpr bool operator!=( digest_t const &rhs ) noexcept {
+					bool is_not_equal = true;
+					for( size_t n=0; n<digest_size; ++n ) {
+						is_not_equal &= data[n] != rhs.data[n];
+					}
+					return is_not_equal;
+				}
+
+
+				constexpr bool operator<( digest_t const & rhs ) noexcept {
+					bool is_less = true;
+					for( size_t n=0; n<digest_size; ++n ) {
+						is_less &= data[n] < rhs.data[n];
+					}
+					return is_less;
+				}
+
+				constexpr bool operator>( digest_t const &rhs ) noexcept {
+					bool is_greater = true;
+					for( size_t n=0; n<digest_size; ++n ) {
+						is_greater &= data[n] > rhs.data[n];
+					}
+					return is_greater;
+				}
+
+				constexpr bool operator<=( digest_t const & rhs ) noexcept {
+					bool is_less_equal = true;
+					for( size_t n=0; n<digest_size; ++n ) {
+						is_less_equal &= data[n] <= rhs.data[n];
+					}
+					return is_less_equal;
+				}
+
+				constexpr bool operator>=( digest_t const &rhs ) noexcept {
+					bool is_greater_equal = true;
+					for( size_t n=0; n<digest_size; ++n ) {
+						is_greater_equal &= data[n] >= rhs.data[n];
+					}
+					return is_greater_equal;
+				}
 			};
 
 			template<typename word_t>
@@ -374,5 +419,25 @@ namespace daw {
 			return sha256_bin( str ).to_hex_string( );
 		}
 	} // namespace crypto
+	namespace crypto_literals {
+		namespace impl {
+			constexpr char to_nibble( char c ) noexcept {
+				c &= 0x0F;
+				if( c < 10 ) {
+					return c + '0';
+				}
+				return ( c - 10 ) + 'a';
+			}
+		}
+
+		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) {	
+			return daw::crypto::sha256_bin( str, len );
+		}
+
+		std::string operator"" _sha256str( char const *str, size_t len ) {
+			return daw::crypto::sha256_bin( str, len ).to_hex_string( );
+		}
+	}
 } // namespace daw
+
 
