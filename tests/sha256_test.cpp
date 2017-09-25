@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE( sha256_010 ) {
 	for( size_t n = 0; n < 1'000'000; ++n ) {
 		one_million_a.push_back( 'a' );
 	}
-	BOOST_REQUIRE_EQUAL( sha256( one_million_a ), "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" );
+	BOOST_REQUIRE_EQUAL( sha256( one_million_a.data( ), one_million_a.size( ) ), "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" );
 }
 
 BOOST_AUTO_TEST_CASE( sha256_011 ) {
@@ -95,6 +95,6 @@ BOOST_AUTO_TEST_CASE( sha256_011 ) {
 	for( size_t n = 0; n < 16'777'216; ++n ) {
 		tst += msg;
 	}
-	BOOST_REQUIRE_EQUAL( sha256( tst ), "50e72a0e26442fe2552dc3938ac58658228c0cbfb1d2ca872ae435266fcd055e" );
+	BOOST_REQUIRE_EQUAL( sha256( tst.data( ), tst.size( ) ), "50e72a0e26442fe2552dc3938ac58658228c0cbfb1d2ca872ae435266fcd055e" );
 }
 

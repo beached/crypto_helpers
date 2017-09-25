@@ -80,35 +80,43 @@ namespace daw {
 
 #ifdef LITTLE_ENDIAN
 			constexpr uint32_t to_uint32_be( uint8_t const *ptr ) noexcept {
-				return static_cast<uint32_t>( ptr[0] << 24u ) | static_cast<uint32_t>( ptr[1] << 16u ) |
-				       static_cast<uint32_t>( ptr[2] << 8u ) | static_cast<uint32_t>( ptr[3] );
+				return static_cast<uint32_t>( static_cast<uint8_t>( ptr[0] ) << 24u ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[1] ) << 16u ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[2] ) << 8u ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[3] ) );
 			}
 
-			constexpr void to_uint64_be( uint8_t *ptr, uint64_t const value ) noexcept {
-				ptr[0] = static_cast<uint8_t>( ( value & 0xFF'00'00'00'00'00'00'00 ) >> 56u );
-				ptr[1] = static_cast<uint8_t>( ( value & 0x00'FF'00'00'00'00'00'00 ) >> 48u );
-				ptr[2] = static_cast<uint8_t>( ( value & 0x00'00'FF'00'00'00'00'00 ) >> 40u );
-				ptr[3] = static_cast<uint8_t>( ( value & 0x00'00'00'FF'00'00'00'00 ) >> 32u );
-				ptr[4] = static_cast<uint8_t>( ( value & 0x00'00'00'00'FF'00'00'00 ) >> 24u );
-				ptr[5] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'FF'00'00 ) >> 16u );
-				ptr[6] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'00'FF'00 ) >> 8u );
-				ptr[7] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'00'00'FF ) );
+			template<typename CharT>
+			constexpr void to_uint64_be( CharT *ptr, uint64_t const value ) noexcept {
+				ptr[0] = static_cast<CharT>( ( value & 0xFF'00'00'00'00'00'00'00 ) >> 56u );
+				ptr[1] = static_cast<CharT>( ( value & 0x00'FF'00'00'00'00'00'00 ) >> 48u );
+				ptr[2] = static_cast<CharT>( ( value & 0x00'00'FF'00'00'00'00'00 ) >> 40u );
+				ptr[3] = static_cast<CharT>( ( value & 0x00'00'00'FF'00'00'00'00 ) >> 32u );
+				ptr[4] = static_cast<CharT>( ( value & 0x00'00'00'00'FF'00'00'00 ) >> 24u );
+				ptr[5] = static_cast<CharT>( ( value & 0x00'00'00'00'00'FF'00'00 ) >> 16u );
+				ptr[6] = static_cast<CharT>( ( value & 0x00'00'00'00'00'00'FF'00 ) >> 8u );
+				ptr[7] = static_cast<CharT>( ( value & 0x00'00'00'00'00'00'00'FF ) );
 			}
 #else
-			constexpr uint32_t to_uint32_be( uint8_t const *ptr ) noexcept {
-				return static_cast<uint32_t>( ptr[0] ) | static_cast<uint32_t>( ptr[1] << 8 ) |
-				       static_cast<uint32_t>( ptr[2] << 16 ) | static_cast<uint32_t>( ptr[3] << 24 );
+
+			template<typename CharT>
+			constexpr uint32_t to_uint32_be( CharT const *ptr ) noexcept {
+				return static_cast<uint32_t>( static_cast<uint8_t>( ptr[0] ) ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[1] ) << 8u ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[2] ) << 16u ) |
+				       static_cast<uint32_t>( static_cast<uint8_t>( ptr[3] ) << 24u );
 			}
 
-			constexpr void to_uint64_be( uint8_t *ptr, uint64_t const value ) noexcept {
-				ptr[0] = static_cast<uint8_t>( value & 0x00'00'00'00'00'00'00'FF );
-				ptr[1] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'00'FF'00 ) >> 8u );
-				ptr[2] = static_cast<uint8_t>( ( value & 0x00'00'00'00'00'FF'00'00 ) >> 16u );
-				ptr[3] = static_cast<uint8_t>( ( value & 0x00'00'00'00'FF'00'00'00 ) >> 24u );
-				ptr[4] = static_cast<uint8_t>( ( value & 0x00'00'00'FF'00'00'00'00 ) >> 32u );
-				ptr[5] = static_cast<uint8_t>( ( value & 0x00'00'FF'00'00'00'00'00 ) >> 40u );
-				ptr[6] = static_cast<uint8_t>( ( value & 0x00'FF'00'00'00'00'00'00 ) >> 48u );
-				ptr[7] = static_cast<uint8_t>( ( value & 0xFF'00'00'00'00'00'00'00 ) >> 56u );
+			template<typename CharT>
+			constexpr void to_uint64_be( CharT *ptr, uint64_t const value ) noexcept {
+				ptr[0] = static_cast<CharT>( value & 0x00'00'00'00'00'00'00'FF );
+				ptr[1] = static_cast<CharT>( ( value & 0x00'00'00'00'00'00'FF'00 ) >> 8u );
+				ptr[2] = static_cast<CharT>( ( value & 0x00'00'00'00'00'FF'00'00 ) >> 16u );
+				ptr[3] = static_cast<CharT>( ( value & 0x00'00'00'00'FF'00'00'00 ) >> 24u );
+				ptr[4] = static_cast<CharT>( ( value & 0x00'00'00'FF'00'00'00'00 ) >> 32u );
+				ptr[5] = static_cast<CharT>( ( value & 0x00'00'FF'00'00'00'00'00 ) >> 40u );
+				ptr[6] = static_cast<CharT>( ( value & 0x00'FF'00'00'00'00'00'00 ) >> 48u );
+				ptr[7] = static_cast<CharT>( ( value & 0xFF'00'00'00'00'00'00'00 ) >> 56u );
 			}
 #endif
 
@@ -190,8 +198,7 @@ namespace daw {
 				{
 					auto message_view = daw::make_array_view( m_message_block.data( ), m_message_block.size( ) );
 					for( size_t i = 0; i < 16; ++i ) {
-						w[i] = impl::to_uint32_be(
-						    static_cast<uint8_t const *>( static_cast<void const *>( message_view.data( ) ) ) );
+						w[i] = impl::to_uint32_be( message_view.data( ) );
 						message_view.remove_prefix( 4 );
 					}
 				}
@@ -240,8 +247,7 @@ namespace daw {
 				size_t push_size = 1;
 				while( !view.empty( ) ) {
 					push_size = std::min( view.size( ), m_message_block.available( ) );
-					m_message_block.push_back( static_cast<byte_t const *>( static_cast<void const *>( view.data( ) ) ),
-					                           push_size );
+					m_message_block.push_back( view.data( ), push_size );
 					if( m_message_block.full( ) ) {
 						transform( );
 					}
@@ -259,7 +265,7 @@ namespace daw {
 				}
 			}
 
-			constexpr void update_impl( byte_t const *first, byte_t const *last ) noexcept {
+			constexpr void update_impl( T const *first, T const *last ) noexcept {
 				auto view = daw::make_array_view( first, last );
 				update_impl( view );
 			}
@@ -280,12 +286,12 @@ namespace daw {
 
 		  public:
 			constexpr void update( T const *message, size_t len ) noexcept {
-				auto view =
-				    daw::make_array_view( static_cast<byte_t const *>( static_cast<void const *>( message ) ), len );
+				auto view = daw::make_array_view( message, len );
 				update_impl( view );
 			}
 
-			constexpr void update( daw::string_view view ) noexcept {
+			template<typename Traits, typename IntIdxType>
+			constexpr void update( daw::basic_string_view<T, Traits, IntIdxType> view ) noexcept {
 				update_impl( view );
 			}
 
@@ -294,7 +300,8 @@ namespace daw {
 				update_impl( view );
 			}
 
-			template<typename Iterator>
+			template<typename Iterator,
+			         typename = std::enable_if_t<sizeof( typename std::iterator_traits<Iterator>::value_type ) == 1>>
 			constexpr void update( Iterator first, Iterator last ) noexcept {
 				update_impl( first, last );
 			}
@@ -311,7 +318,7 @@ namespace daw {
 				while( !m_message_block.full( ) ) {
 					m_message_block.push_back( 0 );
 				}
-				impl::to_uint64_be( static_cast<uint8_t *>( static_cast<void *>( size_begin ) ), message_size );
+				impl::to_uint64_be( size_begin, message_size );
 
 				transform( );
 
@@ -329,27 +336,41 @@ namespace daw {
 
 		using sha256_ctx = sha2_ctx<256, unsigned char>;
 
-		template<typename CharT = char>
-		sha256_digest_t sha256_bin( std::string const &str ) noexcept {
+		template<typename CharT, typename Traits, typename IntSizeType,
+		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_digest_t sha256_bin( daw::basic_string_view<CharT, Traits, IntSizeType> sv ) noexcept {
 			sha2_ctx<256, CharT> ctx{};
-			ctx.update( str.data( ), str.size( ) );
+			ctx.update( sv.data( ), sv.size( ) );
 			return ctx.final( );
 		}
 
-		template<size_t N>
-		constexpr sha256_digest_t sha256_bin( char const ( &str )[N] ) noexcept {
-			sha256_ctx ctx{};
-			ctx.update( static_cast<unsigned char const *>( static_cast<void const *>( str ) ), N - 1 );
+		template<typename CharT, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_digest_t sha256_bin( CharT const *str, size_t len ) noexcept {
+			sha2_ctx<256, CharT> ctx{};
+			ctx.update( str, len );
 			return ctx.final( );
 		}
 
-		template<typename CharT = char>
-		std::string sha256( std::string const &str ) noexcept {
-			return sha256_bin<CharT>( str ).to_hex_string( );
+		template<typename CharT, size_t N, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_digest_t sha256_bin( CharT const ( &str )[N] ) noexcept {
+			sha2_ctx<256, CharT> ctx{};
+			ctx.update( str, N - 1 );
+			return ctx.final( );
 		}
 
-		template<size_t N>
-		std::string sha256_bin( char const ( &str )[N] ) noexcept {
+		template<typename CharT, typename Traits, typename IntSizeType,
+		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		std::string sha256( daw::basic_string_view<char, Traits, IntSizeType> sv ) noexcept {
+			return sha256_bin( sv ).to_hex_string( );
+		}
+
+		template<typename CharT, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		std::string sha256( CharT const *str, size_t len ) noexcept {
+			return sha256_bin( str, len ).to_hex_string( );
+		}
+
+		template<typename CharT, size_t N, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		std::string sha256( CharT const ( &str )[N] ) noexcept {
 			return sha256_bin( str ).to_hex_string( );
 		}
 	} // namespace crypto
