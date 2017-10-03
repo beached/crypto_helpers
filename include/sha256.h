@@ -120,11 +120,12 @@ namespace daw {
 			}
 #endif
 
-			template<typename T, size_t digest_size>
+			template<typename T, size_t DigestSize>
 			struct digest_t {
 				using value_t = T;
 				using reference = value_t &;
 				using const_reference = value_t const &;
+				static size_t const digest_size = DigestSize;
 				alignas( 64 ) daw::array_t<value_t, digest_size> data;
 
 				std::string to_hex_string( ) const {
@@ -418,11 +419,9 @@ namespace daw {
 		std::string sha256( CharT const ( &str )[N] ) noexcept {
 			return sha256_bin( str ).to_hex_string( );
 		}
-	} // namespace crypto
-	namespace crypto_literals {
+
 		namespace impl {
-			constexpr char to_nibble( char c ) noexcept {
-				c &= 0x0F;
+			constexpr char to_nibble( uint8_t c ) noexcept {
 				if( c < 10 ) {
 					return c + '0';
 				}
@@ -430,8 +429,36 @@ namespace daw {
 			}
 		} // namespace impl
 
-		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) {
+		class sha256_hash_string {
+			char m_data[65];
+		public:
+		  constexpr sha256_hash_string( sha256_digest_t const &digest ) noexcept : m_data{0} {
+			  for( size_t n = 0; n < digest.size( ); ++n ) {
+				  auto w = digest[n];
+				  for( size_t m = 8; m > 0; --m ) {
+					  m_data[( 8 * n ) + m - 1] = impl::to_nibble( static_cast<uint8_t>( w & 0x0000000F ) );
+					  w >>= 4;
+				  }
+			  }
+			}
+
+			constexpr char const * c_str( ) const noexcept {
+				return m_data;
+			}
+
+			constexpr operator char const *( ) const noexcept {
+				return m_data;
+			}
+		};
+	} // namespace crypto
+
+	namespace crypto_literals {
+		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) noexcept {
 			return daw::crypto::sha256_bin( str, len );
+		}
+
+		constexpr daw::crypto::sha256_hash_string operator"" _sha256hs( char const *str, size_t len ) noexcept {
+			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( str, len )};
 		}
 
 		inline std::string operator"" _sha256str( char const *str, size_t len ) {
@@ -439,3 +466,4 @@ namespace daw {
 		}
 	} // namespace crypto_literals
 } // namespace daw
+

@@ -39,7 +39,12 @@ void output( ) {
 }
 
 int main( int, char ** ) noexcept {
+	using namespace daw::crypto_literals;
 	constexpr int x{static_cast<int>( sum( ) )};
+
+	constexpr auto y = "Hello World"_sha256hs;
+
+	std::cout << "hash of 'Hello World': " << y << '\n';
 	output<sum( )>( );
 	return x;
 }
