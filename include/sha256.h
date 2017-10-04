@@ -211,6 +211,12 @@ namespace daw {
 			template<typename word_t>
 			constexpr sha256_digest_t const sha256_init_state_values{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
 			                                                         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+			constexpr char to_nibble( uint8_t c ) noexcept {
+				if( c < 10 ) {
+					return c + '0';
+				}
+				return ( c - 10 ) + 'a';
+			}
 		} // namespace impl
 
 		template<size_t digest_size, typename>
@@ -404,45 +410,20 @@ namespace daw {
 			return ctx.final( );
 		}
 
-		template<typename CharT, typename Traits, typename IntSizeType,
-		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
-		std::string sha256( daw::basic_string_view<char, Traits, IntSizeType> sv ) noexcept {
-			return sha256_bin( sv ).to_hex_string( );
-		}
-
-		template<typename CharT, typename = std::enable_if_t<sizeof( CharT ) == 1>>
-		std::string sha256( CharT const *str, size_t len ) noexcept {
-			return sha256_bin( str, len ).to_hex_string( );
-		}
-
-		template<typename CharT, size_t N, typename = std::enable_if_t<sizeof( CharT ) == 1>>
-		std::string sha256( CharT const ( &str )[N] ) noexcept {
-			return sha256_bin( str ).to_hex_string( );
-		}
-
-		namespace impl {
-			constexpr char to_nibble( uint8_t c ) noexcept {
-				if( c < 10 ) {
-					return c + '0';
-				}
-				return ( c - 10 ) + 'a';
-			}
-		} // namespace impl
-
 		class sha256_hash_string {
 			char m_data[65];
-		public:
-		  constexpr sha256_hash_string( sha256_digest_t const &digest ) noexcept : m_data{0} {
-			  for( size_t n = 0; n < digest.size( ); ++n ) {
-				  auto w = digest[n];
-				  for( size_t m = 8; m > 0; --m ) {
-					  m_data[( 8 * n ) + m - 1] = impl::to_nibble( static_cast<uint8_t>( w & 0x0000000F ) );
-					  w >>= 4;
-				  }
-			  }
+		  public:
+			constexpr sha256_hash_string( sha256_digest_t const &digest ) noexcept : m_data{0} {
+				for( size_t n = 0; n < digest.size( ); ++n ) {
+					auto w = digest[n];
+					for( size_t m = 8; m > 0; --m ) {
+						m_data[( 8 * n ) + m - 1] = impl::to_nibble( static_cast<uint8_t>( w & 0x0000000F ) );
+						w >>= 4;
+					}
+				}
 			}
 
-			constexpr char const * c_str( ) const noexcept {
+			constexpr char const *c_str( ) const noexcept {
 				return m_data;
 			}
 
@@ -450,14 +431,35 @@ namespace daw {
 				return m_data;
 			}
 		};
+
+		template<typename CharT, typename Traits, typename IntSizeType,
+		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_hash_string sha256( daw::basic_string_view<char, Traits, IntSizeType> sv ) noexcept {
+			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( sv )};
+		}
+
+		template<typename CharT, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_hash_string sha256( CharT const *str, size_t len ) noexcept {
+			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( str, len )};
+		}
+
+		template<typename CharT, size_t N, typename = std::enable_if_t<sizeof( CharT ) == 1>>
+		constexpr sha256_hash_string sha256( CharT const ( &str )[N] ) noexcept {
+			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( str )};
+		}
+
+		template<typename...Args>
+		inline std::string sha256str( Args&&... args ) noexcept {
+			return std::string{sha256( std::forward<Args>( args )... )};
+		}
 	} // namespace crypto
 
 	namespace crypto_literals {
-		constexpr daw::crypto::sha256_digest_t operator"" _sha256( char const *str, size_t len ) noexcept {
+		constexpr daw::crypto::sha256_digest_t operator"" _sha256_digest( char const *str, size_t len ) noexcept {
 			return daw::crypto::sha256_bin( str, len );
 		}
 
-		constexpr daw::crypto::sha256_hash_string operator"" _sha256hs( char const *str, size_t len ) noexcept {
+		constexpr daw::crypto::sha256_hash_string operator"" _sha256( char const *str, size_t len ) noexcept {
 			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( str, len )};
 		}
 
