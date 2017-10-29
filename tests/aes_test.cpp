@@ -153,13 +153,53 @@ BOOST_AUTO_TEST_CASE( aes_sbox_001 ) {
 	test( input_01, expected_01 );
 }
 
+BOOST_AUTO_TEST_CASE( aes_add_subbytes_001 ) {
+	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x8e, 0x9f, 0xf1, 0xc6, 0x4d, 0xdc, 0xe1, 0xc7,
+	                                                             0xa1, 0x58, 0xd1, 0xc8, 0xbc, 0x9d, 0xc1, 0xc9};
+
+	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x19, 0xdb, 0xa1, 0xb4, 0xe3, 0x86, 0xf8, 0xc6,
+	                                                                0x32, 0x6a, 0x3e, 0xe8, 0x65, 0x5e, 0x78, 0xdd};
+
+	constexpr daw::static_array_t<uint8_t, 16> const input_02 = {0x0,  0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70,
+	                                                             0x80, 0x90, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0};
+
+	constexpr daw::static_array_t<uint8_t, 16> const expected_02 = {0x63, 0xca, 0xb7, 0x04, 0x09, 0x53, 0xd0, 0x51,
+	                                                                0xcd, 0x60, 0xe0, 0xe7, 0xba, 0x70, 0xe1, 0x8c};
+
+	auto const test = []( auto input, auto const &expected_out ) noexcept {
+		daw::crypto::aes::impl::aes_sub_bytes( daw::make_span( input ) );
+		auto const result =
+		    daw::algorithm::equal( input.cbegin( ), input.cend( ), expected_out.cbegin( ), expected_out.cend( ) );
+
+		BOOST_REQUIRE( result );
+	};
+
+	test( input_01, expected_01 );
+	test( input_02, expected_02 );
+}
+
 BOOST_AUTO_TEST_CASE( aes_shift_rows_001 ) {
-	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x8e, 0x9f, 0x01, 0xc6, 0x4d, 0xdc, 0x01, 0xc6,
-	                                                             0xa1, 0x58, 0x01, 0xc6, 0xbc, 0x9d, 0x01, 0xc6};
+	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x8e, 0x9f, 0x01, 0xc6,
+																 0x4d, 0xdc, 0x01, 0xc6,
+	                                                             0xa1, 0x58, 0x01, 0xc6,
+																 0xbc, 0x9d, 0x01, 0xc6};
 
-	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x8e, 0x9f, 0x01, 0xc6, 0xdc, 0x01, 0xc6, 0x4d,
-	                                                                0x01, 0xc6, 0xa1, 0x58, 0xc6, 0xbc, 0x9d, 0x01};
+	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x8e, 0x9f, 0x01, 0xc6,
+																	0xdc, 0x01, 0xc6, 0x4d,
+	                                                                0x01, 0xc6, 0xa1, 0x58,
+																	0xc6, 0xbc, 0x9d, 0x01};
 
+	/*
+	constexpr daw::static_array_t<uint8_t, 16> const input_02 = {0x63, 0xca, 0xb7, 0x04,
+																 0x09, 0x53, 0xd0, 0x51,
+	                                                             0xcd, 0x60, 0xe0, 0xe7,
+																 0xba, 0x70, 0xe1, 0x8c};
+
+	constexpr daw::static_array_t<uint8_t, 16> const expected_02 = {0x63, 0x53, 0xe0, 0x8c,
+																	0x09, 0x60, 0xe1, 0x04,
+	                                                                0xcd, 0x70, 0xb7, 0x51,
+																	0xba, 0xca, 0xd0, 0xe7};
+	*/
 	auto const test = []( auto input, auto const &expected_out ) noexcept {
 		daw::crypto::aes::impl::aes_shift_rows( daw::make_span( input ) );
 		bool const result = input == expected_out;
@@ -167,6 +207,7 @@ BOOST_AUTO_TEST_CASE( aes_shift_rows_001 ) {
 	};
 
 	test( input_01, expected_01 );
+//	test( input_02, expected_02 );
 }
 
 BOOST_AUTO_TEST_CASE( aes_mix_columns_001 ) {
@@ -228,6 +269,6 @@ BOOST_AUTO_TEST_CASE( aes_encrypt_decrypt_001 ) {
 		BOOST_REQUIRE( dec_match );
 	};
 
-	test( key_01, input_01, expected_01 );
 	test( key_02, input_02, expected_02 );
+	test( key_01, input_01, expected_01 );
 }

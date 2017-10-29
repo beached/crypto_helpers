@@ -131,9 +131,9 @@ namespace daw {
 				constexpr void aes_shift_rows( daw::span<uint8_t> block ) noexcept {
 					// Rotate each item left by n for each row
 					for( int_fast8_t n = 1; n < AES_NUM_COLUMNS::value; ++n ) {
-						block.remove_prefix( AES_COLUMN_SIZE::value );
-						daw::algorithm::rotate( block.begin( ), daw::algorithm::next( block.begin( ), n ),
-						                        daw::algorithm::next( block.begin( ), AES_COLUMN_SIZE::value ) );
+						auto cur_block = block.subset( AES_COLUMN_SIZE::value * n, AES_COLUMN_SIZE::value );
+						daw::algorithm::rotate( cur_block.begin( ), daw::algorithm::next( cur_block.begin( ), n ),
+						                        cur_block.end( ) );
 					}
 				}
 				constexpr void aes_shift_rows_inv( daw::span<uint8_t> block ) noexcept {
@@ -251,18 +251,22 @@ namespace daw {
 
 					auto state = make_span( result );
 
-					impl::aes_add_round_key( state, make_array_view( key_sched ) );
+					auto key_round = make_array_view( key_sched );
+					impl::aes_add_round_key( state, key_round );
 
 					for( uint_fast8_t round = 1; round < AES128_NUM_ROUNDS::value; ++round ) {
 						impl::aes_sub_bytes( state );
 						impl::aes_shift_rows( state );
 						impl::aes_mix_columns( state );
-						impl::aes_add_round_key( state, make_array_view( key_sched, round * AES_BLOCK_SIZE::value ) );
+
+						key_round.remove_prefix( AES_BLOCK_SIZE::value );
+						impl::aes_add_round_key( state, key_round );
 					}
 					impl::aes_sub_bytes( state );
 					impl::aes_shift_rows( state );
-					impl::aes_add_round_key(
-					    state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
+
+					key_round.remove_prefix( AES_BLOCK_SIZE::value );
+					impl::aes_add_round_key( state, key_round );
 
 					return result;
 				}
@@ -276,19 +280,25 @@ namespace daw {
 
 					auto state = make_span( result );
 
-					impl::aes_add_round_key(
-					    state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
+					auto key_round = daw::make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value,
+					                                       AES_BLOCK_SIZE::value );
+					impl::aes_add_round_key( state, key_round );
 
 					impl::aes_shift_rows_inv( state );
 					impl::aes_sbox_inv_apply_block( state );
 
 					for( uint_fast8_t round = AES128_NUM_ROUNDS::value - 1u; round > 0; --round ) {
-						impl::aes_add_round_key( state, make_array_view( key_sched, round * AES_BLOCK_SIZE::value ) );
+						key_round =
+						    daw::make_array_view( key_sched, round * AES_BLOCK_SIZE::value, AES_BLOCK_SIZE::value );
+						impl::aes_add_round_key( state, key_round );
+
 						impl::aes_mix_columns_inv( state );
 						impl::aes_shift_rows_inv( state );
 						impl::aes_sbox_inv_apply_block( state );
 					}
-					impl::aes_add_round_key( state, make_array_view( key_sched ) );
+
+					key_round = daw::make_array_view( key_sched, 0, AES_BLOCK_SIZE::value );
+					impl::aes_add_round_key( state, key_round );
 
 					return result;
 				}
