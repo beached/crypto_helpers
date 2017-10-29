@@ -42,7 +42,6 @@ namespace daw {
 			namespace impl {
 				using AES_BLOCK_SIZE = std::integral_constant<uint8_t, 16u>;
 				using AES_COLUMN_SIZE = std::integral_constant<uint8_t, 4u>;
-				using AES_KEY_SCHEDULE_FIRST_RCON = std::integral_constant<uint8_t, 1u>;
 				using AES_KEY_SCHEDULE_WORD_SIZE = std::integral_constant<uint8_t, 4u>;
 				using AES_NUM_COLUMNS = std::integral_constant<uint8_t, 4u>;
 
@@ -67,8 +66,8 @@ namespace daw {
 				}
 
 				constexpr uint8_t aes_mul2( uint8_t a ) noexcept {
-					using AES_REDUCE_BYTE = std::integral_constant<uint8_t, 0x1B>;
-					return static_cast<uint8_t>( ( a << 1u ) ^ ( ( -( a >= 0x80u ) ) & AES_REDUCE_BYTE::value ) );
+					uint8_t const AES_REDUCE_BYTE = 0x1B;
+					return static_cast<uint8_t>( ( a << 1u ) ^ ( ( -( a >= 0x80u ) ) & AES_REDUCE_BYTE ) );
 				}
 
 				constexpr uint8_t aes_mul( uint8_t a, uint8_t b ) noexcept {
@@ -235,15 +234,15 @@ namespace daw {
 				}
 
 				constexpr aes128_key_schedule_t aes128_key_schedule( daw::array_view<uint8_t> key ) {
-
-					auto rcon = AES_KEY_SCHEDULE_FIRST_RCON::value;
+					uint8_t const AES_KEY_SCHEDULE_FIRST_RCON = 1u;
+					auto rcon = AES_KEY_SCHEDULE_FIRST_RCON;
 
 					/* Initial part of key schedule is simply the AES-128 key copied verbatim. */
 					aes128_key_schedule_t result{0};
 
 					daw::algorithm::copy( key.cbegin( ), key.cend( ), result.begin( ) );
 
-					auto const tot_rounds = ( AES128_KEY_SCHEDULE_SIZE::value - AES128_KEY_SIZE::value ) /
+					uint8_t const tot_rounds = ( AES128_KEY_SCHEDULE_SIZE::value - AES128_KEY_SIZE::value ) /
 					                        AES_KEY_SCHEDULE_WORD_SIZE::value;
 
 					auto p_key_0 = make_span( result, AES128_KEY_SIZE::value );
@@ -312,7 +311,7 @@ namespace daw {
 					auto state = make_span( result );
 
 					impl::aes_add_round_key(
-							state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
+					    state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
 
 					impl::aes_shift_rows_inv( state );
 					impl::aes_sbox_inv_apply_block( state );
