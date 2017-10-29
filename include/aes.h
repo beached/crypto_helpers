@@ -47,10 +47,13 @@ namespace daw {
 				using AES_NUM_COLUMNS = std::integral_constant<uint8_t, 4u>;
 
 				using AES128_NUM_ROUNDS = std::integral_constant<uint8_t, 10u>;
+
 				using AES128_KEY_SCHEDULE_SIZE =
 				    std::integral_constant<uint8_t, AES_BLOCK_SIZE::value *( AES128_NUM_ROUNDS::value + 1u )>;
+
 				using AES128_KEY_SIZE = std::integral_constant<uint8_t, 16u>;
 			} // namespace impl
+
 			using cipher_t = daw::static_array_t<uint8_t, 16>;
 
 			template<size_t KeyScheduleSize>
@@ -308,7 +311,9 @@ namespace daw {
 
 					auto state = make_span( result );
 
-					impl::aes_add_round_key( state, make_array_view( key_sched ) );
+					impl::aes_add_round_key(
+							state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
+
 					impl::aes_shift_rows_inv( state );
 					impl::aes_sbox_inv_apply_block( state );
 
