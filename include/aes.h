@@ -45,7 +45,6 @@ namespace daw {
 				using AES_KEY_SCHEDULE_FIRST_RCON = std::integral_constant<uint8_t, 1u>;
 				using AES_KEY_SCHEDULE_WORD_SIZE = std::integral_constant<uint8_t, 4u>;
 				using AES_NUM_COLUMNS = std::integral_constant<uint8_t, 4u>;
-				using AES_REDUCE_BYTE = std::integral_constant<uint8_t, 0x1B>;
 
 				using AES128_NUM_ROUNDS = std::integral_constant<uint8_t, 10u>;
 				using AES128_KEY_SCHEDULE_SIZE =
@@ -65,6 +64,7 @@ namespace daw {
 				}
 
 				constexpr uint8_t aes_mul2( uint8_t a ) noexcept {
+					using AES_REDUCE_BYTE = std::integral_constant<uint8_t, 0x1B>;
 					return static_cast<uint8_t>( ( a << 1u ) ^ ( ( -( a >= 0x80u ) ) & AES_REDUCE_BYTE::value ) );
 				}
 
@@ -127,100 +127,107 @@ namespace daw {
 				}
 
 				constexpr void aes_shift_rows( daw::span<uint8_t> block ) noexcept {
+					// First row doesn't shift
+					// Shift the second row
+					auto temp_byte = block[0u + AES_COLUMN_SIZE::value * 1u];
+					block[0u + AES_COLUMN_SIZE::value * 1u] = block[1u + AES_COLUMN_SIZE::value * 1u];
+					block[1u + AES_COLUMN_SIZE::value * 1u] = block[2u + AES_COLUMN_SIZE::value * 1u];
+					block[2u + AES_COLUMN_SIZE::value * 1u] = block[3u + AES_COLUMN_SIZE::value * 1u];
+					block[3u + AES_COLUMN_SIZE::value * 1u] = temp_byte;
 
-					/* First row doesn't shift */
-					/* Shift the second row */
-					auto temp_byte = block[0u * AES_COLUMN_SIZE::value + 1u];
-					block[0u * AES_COLUMN_SIZE::value + 1u] = block[1u * AES_COLUMN_SIZE::value + 1u];
-					block[1u * AES_COLUMN_SIZE::value + 1u] = block[2u * AES_COLUMN_SIZE::value + 1u];
-					block[2u * AES_COLUMN_SIZE::value + 1u] = block[3u * AES_COLUMN_SIZE::value + 1u];
-					block[3u * AES_COLUMN_SIZE::value + 1u] = temp_byte;
+					// Shift the third row
+					temp_byte = block[0u + AES_COLUMN_SIZE::value * 2u];
+					block[0u + AES_COLUMN_SIZE::value * 2u] = block[2u + AES_COLUMN_SIZE::value * 2u];
+					block[2u + AES_COLUMN_SIZE::value * 2u] = temp_byte;
+					temp_byte = block[1u + AES_COLUMN_SIZE::value * 2u];
+					block[1u + AES_COLUMN_SIZE::value * 2u] = block[3u + AES_COLUMN_SIZE::value * 2u];
+					block[3u + AES_COLUMN_SIZE::value * 2u] = temp_byte;
 
-					/* Shift the third row */
-					temp_byte = block[0u * AES_COLUMN_SIZE::value + 2u];
-					block[0u * AES_COLUMN_SIZE::value + 2u] = block[2u * AES_COLUMN_SIZE::value + 2u];
-					block[2u * AES_COLUMN_SIZE::value + 2u] = temp_byte;
-					temp_byte = block[1u * AES_COLUMN_SIZE::value + 2u];
-					block[1u * AES_COLUMN_SIZE::value + 2u] = block[3u * AES_COLUMN_SIZE::value + 2u];
-					block[3u * AES_COLUMN_SIZE::value + 2u] = temp_byte;
-
-					/* Shift the fourth row */
-					temp_byte = block[3u * AES_COLUMN_SIZE::value + 3u];
-					block[3u * AES_COLUMN_SIZE::value + 3u] = block[2u * AES_COLUMN_SIZE::value + 3u];
-					block[2u * AES_COLUMN_SIZE::value + 3u] = block[1u * AES_COLUMN_SIZE::value + 3u];
-					block[1u * AES_COLUMN_SIZE::value + 3u] = block[0u * AES_COLUMN_SIZE::value + 3u];
-					block[0u * AES_COLUMN_SIZE::value + 3u] = temp_byte;
+					// Shift the fourth row
+					temp_byte = block[3u + AES_COLUMN_SIZE::value * 3u];
+					block[3u + AES_COLUMN_SIZE::value * 3u] = block[2u + AES_COLUMN_SIZE::value * 3u];
+					block[2u + AES_COLUMN_SIZE::value * 3u] = block[1u + AES_COLUMN_SIZE::value * 3u];
+					block[1u + AES_COLUMN_SIZE::value * 3u] = block[0u + AES_COLUMN_SIZE::value * 3u];
+					block[0u + AES_COLUMN_SIZE::value * 3u] = temp_byte;
 				}
 
 				constexpr void aes_shift_rows_inv( daw::span<uint8_t> block ) noexcept {
 
 					/* First row doesn't shift */
 					/* Shift the second row */
-					auto temp_byte = block[3u * AES_COLUMN_SIZE::value + 1u];
-					block[3u * AES_COLUMN_SIZE::value + 1u] = block[2u * AES_COLUMN_SIZE::value + 1u];
-					block[2u * AES_COLUMN_SIZE::value + 1u] = block[1u * AES_COLUMN_SIZE::value + 1u];
-					block[1u * AES_COLUMN_SIZE::value + 1u] = block[0u * AES_COLUMN_SIZE::value + 1u];
-					block[0u * AES_COLUMN_SIZE::value + 1u] = temp_byte;
+					auto temp_byte = block[3u + AES_COLUMN_SIZE::value * 1u];
+					block[3u + AES_COLUMN_SIZE::value * 1u] = block[2u + AES_COLUMN_SIZE::value * 1u];
+					block[2u + AES_COLUMN_SIZE::value * 1u] = block[1u + AES_COLUMN_SIZE::value * 1u];
+					block[1u + AES_COLUMN_SIZE::value * 1u] = block[0u + AES_COLUMN_SIZE::value * 1u];
+					block[0u + AES_COLUMN_SIZE::value * 1u] = temp_byte;
 
 					/* Shift the third row */
-					temp_byte = block[0u * AES_COLUMN_SIZE::value + 2u];
-					block[0u * AES_COLUMN_SIZE::value + 2u] = block[2u * AES_COLUMN_SIZE::value + 2u];
-					block[2u * AES_COLUMN_SIZE::value + 2u] = temp_byte;
-					temp_byte = block[1u * AES_COLUMN_SIZE::value + 2u];
-					block[1u * AES_COLUMN_SIZE::value + 2u] = block[3u * AES_COLUMN_SIZE::value + 2u];
-					block[3u * AES_COLUMN_SIZE::value + 2u] = temp_byte;
+					temp_byte = block[0u + AES_COLUMN_SIZE::value + 2u];
+					block[0u + AES_COLUMN_SIZE::value * 2u] = block[2u + AES_COLUMN_SIZE::value * 2u];
+					block[2u + AES_COLUMN_SIZE::value * 2u] = temp_byte;
+					temp_byte = block[1u + AES_COLUMN_SIZE::value + 2u];
+					block[1u + AES_COLUMN_SIZE::value * 2u] = block[3u + AES_COLUMN_SIZE::value * 2u];
+					block[3u + AES_COLUMN_SIZE::value * 2u] = temp_byte;
 
 					/* Shift the fourth row */
-					temp_byte = block[0u * AES_COLUMN_SIZE::value + 3u];
-					block[0u * AES_COLUMN_SIZE::value + 3u] = block[1u * AES_COLUMN_SIZE::value + 3u];
-					block[1u * AES_COLUMN_SIZE::value + 3u] = block[2u * AES_COLUMN_SIZE::value + 3u];
-					block[2u * AES_COLUMN_SIZE::value + 3u] = block[3u * AES_COLUMN_SIZE::value + 3u];
-					block[3u * AES_COLUMN_SIZE::value + 3u] = temp_byte;
+					temp_byte = block[0u + AES_COLUMN_SIZE::value * 3u];
+					block[0u + AES_COLUMN_SIZE::value * 3u] = block[1u + AES_COLUMN_SIZE::value * 3u];
+					block[1u + AES_COLUMN_SIZE::value * 3u] = block[2u + AES_COLUMN_SIZE::value * 3u];
+					block[2u + AES_COLUMN_SIZE::value * 3u] = block[3u + AES_COLUMN_SIZE::value * 3u];
+					block[3u + AES_COLUMN_SIZE::value * 3u] = temp_byte;
+				}
+
+				constexpr uint8_t blk_pos( uint8_t r, uint8_t c ) noexcept {
+					return r * AES_COLUMN_SIZE::value + c;
 				}
 
 				constexpr void aes_mix_columns( daw::span<uint8_t> block ) noexcept {
-
 					for( uint_fast8_t n = 0; n < AES_NUM_COLUMNS::value; ++n ) {
+						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{
+						    static_cast<uint8_t>( aes_mul( block[blk_pos( 0, n )], 2u ) ^
+						                          aes_mul( block[blk_pos( 1, n )], 3u ) ^ block[blk_pos( 2, n )] ^
+						                          block[blk_pos( 3, n )] ),
 
-						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{0};
+						    static_cast<uint8_t>( block[blk_pos( 0, n )] ^ aes_mul( block[blk_pos( 1, n )], 2u ) ^
+						                          aes_mul( block[blk_pos( 2, n )], 3u ) ^ block[blk_pos( 3, n )] ),
 
-						for( uint_fast8_t m = 0; m < AES_COLUMN_SIZE::value; ++m ) {
+						    static_cast<uint8_t>( block[blk_pos( 0, n )] ^ block[blk_pos( 1, n )] ^
+						                          aes_mul( block[blk_pos( 2, n )], 2u ) ^
+						                          aes_mul( block[blk_pos( 3, n )], 3u ) ),
 
-							auto const byte_value = block[n * AES_COLUMN_SIZE::value + m];
-							auto const byte_value_2 = aes_mul2( byte_value );
-
-							temp_column[( m + 0u ) % AES_COLUMN_SIZE::value] ^= byte_value_2;
-							temp_column[( m + 1u ) % AES_COLUMN_SIZE::value] ^= byte_value;
-							temp_column[( m + 2u ) % AES_COLUMN_SIZE::value] ^= byte_value;
-							temp_column[( m + 3u ) % AES_COLUMN_SIZE::value] ^= byte_value ^ byte_value_2;
-						}
-						daw::algorithm::copy_n( temp_column.cbegin( ),
-						                        daw::next( block.begin( ) + ( n * AES_COLUMN_SIZE::value ) ),
-						                        AES_COLUMN_SIZE::value );
+						    static_cast<uint8_t>( aes_mul( block[blk_pos( 0, n )], 3u ) ^ block[blk_pos( 1, n )] ^
+						                          block[blk_pos( 2, n )] ^ aes_mul( block[blk_pos( 3, n )], 2u ) ),
+						};
+						block[blk_pos( 0, n )] = temp_column[0];
+						block[blk_pos( 1, n )] = temp_column[1];
+						block[blk_pos( 2, n )] = temp_column[2];
+						block[blk_pos( 3, n )] = temp_column[3];
 					}
 				}
 
 				constexpr void aes_mix_columns_inv( daw::span<uint8_t> block ) noexcept {
+					for( uint_fast8_t n = 0; n < AES_NUM_COLUMNS::value; ++n ) {
+						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{
+						    static_cast<uint8_t>(
+						        aes_mul( block[blk_pos( 0, n )], 14u ) ^ aes_mul( block[blk_pos( 1, n )], 11u ) ^
+						        aes_mul( block[blk_pos( 2, n )], 13u ) ^ aes_mul( block[blk_pos( 3, n )], 9u ) ),
 
-					for( uint_fast8_t n = 0; n < AES_NUM_COLUMNS::value; n++ ) {
-						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{0};
+						    static_cast<uint8_t>(
+						        aes_mul( block[blk_pos( 0, n )], 9u ) ^ aes_mul( block[blk_pos( 1, n )], 14u ) ^
+						        aes_mul( block[blk_pos( 2, n )], 11u ) ^ aes_mul( block[blk_pos( 3, n )], 13u ) ),
 
-						for( uint_fast8_t m = 0; m < AES_COLUMN_SIZE::value; m++ ) {
-							uint8_t const byte_value = block[n * AES_COLUMN_SIZE::value + m];
-							uint8_t const byte_value_2 = aes_mul2( byte_value );
-							uint8_t const byte_value_4 = aes_mul2( byte_value_2 );
-							uint8_t const byte_value_8 = aes_mul2( byte_value_4 );
+						    static_cast<uint8_t>(
+						        aes_mul( block[blk_pos( 0, n )], 13u ) ^ aes_mul( block[blk_pos( 1, n )], 9u ) ^
+						        aes_mul( block[blk_pos( 2, n )], 14u ) ^ aes_mul( block[blk_pos( 3, n )], 11u ) ),
 
-							temp_column[( m + 0u ) % AES_COLUMN_SIZE::value] ^=
-							    byte_value_8 ^ byte_value_4 ^ byte_value_2;
-							temp_column[( m + 1u ) % AES_COLUMN_SIZE::value] ^= byte_value_8 ^ byte_value;
-							temp_column[( m + 2u ) % AES_COLUMN_SIZE::value] ^=
-							    byte_value_8 ^ byte_value_4 ^ byte_value;
-							temp_column[( m + 3u ) % AES_COLUMN_SIZE::value] ^=
-							    byte_value_8 ^ byte_value_2 ^ byte_value;
-						}
-						daw::algorithm::copy_n( temp_column.cbegin( ), block.begin( ) + ( n * AES_COLUMN_SIZE::value ),
-						                        AES_COLUMN_SIZE::value );
+						    static_cast<uint8_t>(
+						        aes_mul( block[blk_pos( 0, n )], 11u ) ^ aes_mul( block[blk_pos( 1, n )], 13u ) ^
+						        aes_mul( block[blk_pos( 2, n )], 9u ) ^ aes_mul( block[blk_pos( 3, n )], 14u ) ),
+						};
+						block[blk_pos( 0, n )] = temp_column[0];
+						block[blk_pos( 1, n )] = temp_column[1];
+						block[blk_pos( 2, n )] = temp_column[2];
+						block[blk_pos( 3, n )] = temp_column[3];
 					}
 				}
 
@@ -274,19 +281,20 @@ namespace daw {
 					cipher_t result{0};
 					daw::algorithm::copy_n( message_block.cbegin( ), result.begin( ), result.size( ) );
 
-					auto block = make_span( result );
+					auto state = make_span( result );
 
-					impl::aes_add_round_key( block, make_array_view( key_sched ) );
+					impl::aes_add_round_key( state, make_array_view( key_sched ) );
+
 					for( uint_fast8_t round = 1; round < AES128_NUM_ROUNDS::value; ++round ) {
-						impl::aes_sub_bytes( block );
-						impl::aes_shift_rows( block );
-						impl::aes_mix_columns( block );
-						impl::aes_add_round_key( block, make_array_view( key_sched, round * AES_BLOCK_SIZE::value ) );
+						impl::aes_sub_bytes( state );
+						impl::aes_shift_rows( state );
+						impl::aes_mix_columns( state );
+						impl::aes_add_round_key( state, make_array_view( key_sched, round * AES_BLOCK_SIZE::value ) );
 					}
-					impl::aes_sub_bytes( block );
-					impl::aes_shift_rows( block );
+					impl::aes_sub_bytes( state );
+					impl::aes_shift_rows( state );
 					impl::aes_add_round_key(
-					    block, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
+					    state, make_array_view( key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value ) );
 
 					return result;
 				}
