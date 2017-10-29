@@ -115,7 +115,25 @@ BOOST_AUTO_TEST_CASE( aes_key_schedule ) {
 	test( input_04, expected_04 );
 }
 
-BOOST_AUTO_TEST_CASE( aes_round_key_001 ) {}
+BOOST_AUTO_TEST_CASE( aes_round_key_001 ) {
+	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x0,  0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+	                                                             0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+
+	constexpr daw::static_array_t<uint8_t, 16> const key_01 = {0x0,  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	                                                           0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+
+	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x0,  0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70,
+	                                                                0x80, 0x90, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0};
+
+	auto const test = []( auto input, auto const &key, auto const &expected_out ) noexcept {
+		daw::crypto::aes::impl::aes_add_round_key( daw::make_span( input ), daw::make_array_view( key ) );
+		auto const result =
+		    daw::algorithm::equal( input.cbegin( ), input.cend( ), expected_out.cbegin( ), expected_out.cend( ) );
+		BOOST_REQUIRE( result );
+	};
+
+	test( input_01, key_01, expected_01 );
+}
 
 BOOST_AUTO_TEST_CASE( aes_sbox_001 ) {
 	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x8e, 0x9f, 0xf1, 0xc6, 0x4d, 0xdc, 0xe1, 0xc7,
@@ -124,7 +142,7 @@ BOOST_AUTO_TEST_CASE( aes_sbox_001 ) {
 	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x19, 0xdb, 0xa1, 0xb4, 0xe3, 0x86, 0xf8, 0xc6,
 	                                                                0x32, 0x6a, 0x3e, 0xe8, 0x65, 0x5e, 0x78, 0xdd};
 
-	auto const test = []( auto const &input, auto const expected_out ) noexcept {
+	auto const test = []( auto const &input, auto const &expected_out ) noexcept {
 		for( size_t n = 0; n < input.size( ); ++n ) {
 			auto const output = daw::crypto::aes::impl::aes_sbox( input[n] );
 			bool const result = output == expected_out[n];
@@ -171,10 +189,19 @@ BOOST_AUTO_TEST_CASE( aes_encrypt_decrypt_001 ) {
 	constexpr daw::static_array_t<uint8_t, 16> const key_01 = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
 	                                                           0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 
-	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
+	constexpr daw::static_array_t<uint8_t, 16> const input_01 = {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d,
+	                                                             0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34};
+
+	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x39, 0x02, 0xdc, 0x19, 0x25, 0xdc, 0x11, 0x6a,
+	                                                                0x84, 0x09, 0x85, 0x0b, 0x1d, 0xfb, 0x97, 0x32};
+
+	constexpr daw::static_array_t<uint8_t, 16> const key_02 = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+	                                                           0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+
+	constexpr daw::static_array_t<uint8_t, 16> const input_02 = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
 	                                                             0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a};
 
-	constexpr daw::static_array_t<uint8_t, 16> const expected_01 = {0x76, 0x49, 0xab, 0xac, 0x81, 0x19, 0xb2, 0x46,
+	constexpr daw::static_array_t<uint8_t, 16> const expected_02 = {0x76, 0x49, 0xab, 0xac, 0x81, 0x19, 0xb2, 0x46,
 	                                                                0xce, 0xe9, 0x8e, 0x9b, 0x12, 0xe9, 0x19, 0x7d};
 
 	auto const test = []( auto const &key, auto const &input, auto const &expected_out ) noexcept {
@@ -196,10 +223,11 @@ BOOST_AUTO_TEST_CASE( aes_encrypt_decrypt_001 ) {
 		bool const encdec_match = daw::algorithm::equal( deciphered_input.cbegin( ), deciphered_input.cend( ),
 		                                                 input.cbegin( ), input.cend( ) );
 
+		BOOST_REQUIRE( encdec_match );
 		BOOST_REQUIRE( enc_match );
 		BOOST_REQUIRE( dec_match );
-		BOOST_REQUIRE( encdec_match );
 	};
 
 	test( key_01, input_01, expected_01 );
+	test( key_02, input_02, expected_02 );
 }
