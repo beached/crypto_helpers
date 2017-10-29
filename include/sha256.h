@@ -30,8 +30,8 @@
 
 #include <daw/daw_array_view.h>
 #include <daw/daw_fixed_stack.h>
-#include <daw/daw_stack_array.h>
 #include <daw/daw_string_view.h>
+#include <daw/daw_static_array.h>
 
 namespace daw {
 	namespace crypto {
@@ -126,7 +126,7 @@ namespace daw {
 				using reference = value_t &;
 				using const_reference = value_t const &;
 				static size_t const digest_size = DigestSize;
-				alignas( 64 ) daw::array_t<value_t, digest_size> data;
+				alignas( 64 ) daw::static_array_t<value_t, digest_size> data;
 
 				std::string to_hex_string( ) const {
 					std::stringstream ss;
@@ -194,7 +194,7 @@ namespace daw {
 			};
 
 			template<typename word_t>
-			alignas( 64 ) constexpr daw::array_t<word_t const, 64> const sha256_k{
+			alignas( 64 ) constexpr daw::static_array_t<word_t const, 64> const sha256_k{
 			    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
 			    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
 			    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -213,9 +213,9 @@ namespace daw {
 			                                                         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 			constexpr char to_nibble( uint8_t c ) noexcept {
 				if( c < 10 ) {
-					return c + '0';
+					return static_cast<char>( c ) + '0';
 				}
-				return ( c - 10 ) + 'a';
+				return ( static_cast<char>( c ) - 10 ) + 'a';
 			}
 		} // namespace impl
 
@@ -244,7 +244,7 @@ namespace daw {
 				 * Initialize array of round constants:
 				 * (first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311):
 				 */
-				alignas( 64 ) daw::array_t<word_t, 64> w{0};
+				alignas( 64 ) daw::static_array_t<word_t, 64> w{0};
 				// Copy message to first 16 words of w array
 				{
 					auto message_view = daw::make_array_view( m_message_block.data( ), m_message_block.size( ) );
@@ -260,7 +260,7 @@ namespace daw {
 					w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 				}
 
-				alignas( 64 ) daw::array_t<word_t, 10> tmp_state{m_state[0], m_state[1], m_state[2], m_state[3],
+				alignas( 64 ) daw::static_array_t<word_t, 10> tmp_state{m_state[0], m_state[1], m_state[2], m_state[3],
 				                                                 m_state[4], m_state[5], m_state[6], m_state[7],
 				                                                 0,          0};
 
@@ -413,7 +413,7 @@ namespace daw {
 		class sha256_hash_string {
 			char m_data[65];
 		  public:
-			constexpr sha256_hash_string( sha256_digest_t const &digest ) noexcept : m_data{0} {
+			explicit constexpr sha256_hash_string( sha256_digest_t const &digest ) noexcept : m_data{0} {
 				for( size_t n = 0; n < digest.size( ); ++n ) {
 					auto w = digest[n];
 					for( size_t m = 8; m > 0; --m ) {

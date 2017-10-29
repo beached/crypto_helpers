@@ -4,7 +4,7 @@ project( crypto_helpers )
 
 include( ExternalProject )
 
-find_package( Boost 1.58.0 COMPONENTS system iostreams filesystem regex unit_test_framework REQUIRED )
+find_package( Boost 1.60.0 COMPONENTS system iostreams filesystem regex unit_test_framework REQUIRED )
 
 enable_testing( )
 add_definitions( -DBOOST_ALL_NO_LIB ) 
@@ -52,30 +52,39 @@ include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories( "${CMAKE_BINARY_DIR}/install/lib" )
 link_directories( ${Boost_LIBRARY_DIRS} )
 
-set( HEADER_FILES
+set( SHA256_HEADER_FILES
 	${HEADER_FOLDER}/sha256.h
+)
+
+set( AES_HEADER_FILES
+	${HEADER_FOLDER}/aes.h
 )
 
 add_definitions( -DBOOST_TEST_DYN_LINK -DBOOST_ALL_NO_LIB -DBOOST_ALL_DYN_LINK )
 
-add_executable( sha256_test_bin ${HEADER_FILES} ${TEST_FOLDER}/sha256_test.cpp )
+add_executable( sha256_test_bin ${SHA256_HEADER_FILES} ${TEST_FOLDER}/sha256_test.cpp )
 target_link_libraries( sha256_test_bin ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( sha256_test_bin header_libraries_prj )
 add_test( sha256_test sha256_test_bin )
 
-add_executable( sha256sum ${HEADER_FILES} ${SOURCE_FOLDER}/sha256sum.cpp )
+add_executable( sha256sum ${SHA256_HEADER_FILES} ${SOURCE_FOLDER}/sha256sum.cpp )
 target_link_libraries( sha256sum ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( sha256sum header_libraries_prj )
 
-add_executable( constexpr ${HEADER_FILES} ${TEST_FOLDER}/constexpr.cpp )
+add_executable( constexpr ${SHA256_HEADER_FILES} ${TEST_FOLDER}/constexpr.cpp )
 target_link_libraries( constexpr ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( constexpr header_libraries_prj )
 add_test( constexpr_test constexpr )
 
-add_executable( speed_test ${HEADER_FILES} ${TEST_FOLDER}/speed_test.cpp )
+add_executable( speed_test ${SHA256_HEADER_FILES} ${TEST_FOLDER}/speed_test.cpp )
 target_link_libraries( speed_test ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
 add_dependencies( speed_test header_libraries_prj )
 add_test( speed_test_test speed_test )
+
+add_executable( aes_test_bin ${AES_HEADER_FILES} ${TEST_FOLDER}/aes_test.cpp )
+target_link_libraries( aes_test_bin ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
+add_dependencies( aes_test_bin header_libraries_prj )
+add_test( aes_test aes_test_bin )
 
 install( DIRECTORY ${HEADER_FOLDER}/ DESTINATION include/daw/crypto )
 

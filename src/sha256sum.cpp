@@ -26,7 +26,7 @@
 #include <iostream>
 
 #include <daw/daw_memory_mapped_file.h>
-#include <daw/daw_stack_array.h>
+#include <daw/daw_static_array.h>
 #include <daw/daw_string_view.h>
 
 #include "sha256.h"
@@ -35,8 +35,8 @@ namespace {
 	void do_console( ) noexcept {
 		std::ios_base::sync_with_stdio( false );
 		daw::crypto::sha256_ctx ctx{};
-		daw::array_t<unsigned char, 1024> buffer = {0};
-		char *io_ptr = reinterpret_cast<char *>( buffer.data( ) );
+		daw::static_array_t<unsigned char, 1024> buffer = {0};
+		auto io_ptr = reinterpret_cast<char *>( buffer.data( ) );
 		std::streamsize read_count = 0;
 		while( std::cin.good( ) && ( read_count = std::cin.readsome( io_ptr, static_cast<std::streamsize>( buffer.size( ) ) ) ) > 0 ) {
 			ctx.update( buffer.data( ), static_cast<size_t>( read_count ) );
