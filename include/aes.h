@@ -305,10 +305,34 @@ namespace daw {
 					key_round = daw::make_array_view( key_sched, 0, AES_BLOCK_SIZE::value );
 					impl::aes_add_round_key( state, key_round );
 
-					//return result;
+					// return result;
 					return convert_state( make_array_view( result ) );
 				}
+
+				constexpr void aes_encrypt_128_block( daw::array_view<uint8_t> input, daw::array_view<uint8_t> key,
+				                                      daw::span<uint8_t> cipher ) noexcept {
+					auto const tmp = aes_encrypt_128_block( input.subset( 0, AES_BLOCK_SIZE::value ), key );
+					daw::algorithm::copy( tmp.cbegin( ), tmp.cend( ), cipher.begin( ) );
+				}
+
 			} // namespace impl
+
+			// cipher must have enough room for round(input.size( )/AES_BLOCK_SIZE::value) * AES_BLOCK_SIZE::value
+			constexpr void aes_encrypt_128( daw::array_view<uint8_t> input, daw::array_view<uint8_t> key,
+			                                daw::span<uint8_t> cipher ) noexcept {
+				size_t const count = input.size( ) / impl::AES_BLOCK_SIZE::value;
+				for( size_t n = 0; n < count; ++n ) {
+					impl::aes_encrypt_128_block( input.subset( 0, impl::AES_BLOCK_SIZE::value ), key, cipher );
+					input.remove_prefix( impl::AES_BLOCK_SIZE::value );
+					cipher.remove_prefix( impl::AES_BLOCK_SIZE::value );
+				}
+				if( !input.empty( ) ) {
+					daw::static_array_t<uint8_t, impl::AES_BLOCK_SIZE::value> ct_tmp{0};
+					daw::algorithm::copy( input.cbegin( ), input.cend( ), ct_tmp.begin( ) );
+					impl::aes_encrypt_128_block( daw::make_array_view( ct_tmp ), key, cipher );
+				}
+			} // namespace aes
 		}     // namespace aes
 	}         // namespace crypto
 } // namespace daw
+
