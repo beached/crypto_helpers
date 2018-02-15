@@ -133,7 +133,7 @@ namespace daw {
 					for( int_fast8_t n = 1; n < AES_NUM_COLUMNS::value; ++n ) {
 						auto cur_block =
 						    block.subset( static_cast<uint8_t>( AES_COLUMN_SIZE::value * n ), AES_COLUMN_SIZE::value );
-						daw::algorithm::rotate( cur_block.begin( ), daw::algorithm::next( cur_block.begin( ), n ),
+						daw::algorithm::rotate( cur_block.begin( ), daw::next( cur_block.begin( ), n ),
 						                        cur_block.end( ) );
 					}
 				}
@@ -142,7 +142,7 @@ namespace daw {
 					// Rotate each item right by n for each row
 					for( uint_fast8_t n = 1; n < AES_NUM_COLUMNS::value; ++n ) {
 						auto cur_block = block.subset( AES_COLUMN_SIZE::value * n, AES_COLUMN_SIZE::value );
-						daw::algorithm::rotate( cur_block.rbegin( ), daw::algorithm::next( cur_block.rbegin( ), n ),
+						daw::algorithm::rotate( cur_block.rbegin( ), daw::next( cur_block.rbegin( ), n ),
 						                        cur_block.rend( ) );
 					}
 				}
