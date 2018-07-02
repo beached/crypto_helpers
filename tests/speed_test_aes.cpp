@@ -1,16 +1,16 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017 Darrell Wright
+// Copyright (c) 2017-2018 Darrell Wright
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files( the "Software" ), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
-// copies of the Software, and to permit persons to whom the Software is
+// of this software and associated documentation files( the "Software" ), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and / or
+// sell copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -37,13 +37,19 @@ int main( int, char ** ) {
 	result.resize( 1_GB );
 	auto result_view = daw::make_span( result );
 
-	constexpr daw::static_array_t<uint8_t, daw::crypto::aes::impl::AES128_KEY_SIZE::value> const key = {
-	    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	constexpr daw::static_array_t<
+	  uint8_t, daw::crypto::aes::impl::AES128_KEY_SIZE::value> const key = {
+	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 	auto key_view = daw::make_array_view( key );
 
 	daw::show_benchmark( data_view.size( ), "speed_test_aes_001",
-	                     [&]( ) { daw::crypto::aes::aes_encrypt_128( data_view, key_view, result_view ); }, 2, 2 );
+	                     [&]( ) {
+		                     daw::crypto::aes::aes_encrypt_128( data_view, key_view,
+		                                                        result_view );
+	                     },
+	                     2, 2 );
 
 	return EXIT_SUCCESS;
 }
