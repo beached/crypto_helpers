@@ -1,0 +1,21 @@
+if( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" )
+	set( GLEAN_CACHE "${CMAKE_SOURCE_DIR}/.glean/debug" )
+	set( GLEAN_CACHE2 "${CMAKE_SOURCE_DIR}/.glean/release" )
+else( )
+	set( GLEAN_CACHE "${CMAKE_SOURCE_DIR}/.glean/release" )
+	set( GLEAN_CACHE2 "${CMAKE_SOURCE_DIR}/.glean/debug" )
+endif( )
+
+message( "Checking for glean cache: '${GLEAN_CACHE}'" )
+if( EXISTS "${GLEAN_CACHE}" )
+	message( "using glean dependencies" )
+
+	add_custom_target( dependency_stub )
+	include_directories( SYSTEM "${GLEAN_CACHE}/include" )
+	link_directories( "${GLEAN_CACHE}/lib" )
+elseif( EXISTS "${GLEAN_CACHE2}" )
+	message( "looks like glean is in use but missing ${GLEAN_CACHE}" )
+else( )
+	message( FATAL_ERROR, "missing glean dependencies, run glean" )
+endif( )
+

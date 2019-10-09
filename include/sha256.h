@@ -22,15 +22,16 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
-#include <daw/daw_array_view.h>
-#include <daw/daw_fixed_stack.h>
-#include <daw/daw_static_array.h>
+#include <daw/daw_bounded_vector.h>
+#include <daw/daw_random.h>
+#include <daw/daw_span.h>
 #include <daw/daw_string_view.h>
 
 namespace daw {
@@ -144,7 +145,7 @@ namespace daw {
 				using reference = value_t &;
 				using const_reference = value_t const &;
 				static size_t const digest_size = DigestSize;
-				alignas( 64 ) daw::static_array_t<value_t, digest_size> data;
+				alignas( 64 ) std::array<value_t, digest_size> data;
 
 				std::string to_hex_string( ) const {
 					std::stringstream ss;
@@ -214,8 +215,7 @@ namespace daw {
 			};
 
 			template<typename word_t>
-			alignas(
-			  64 ) constexpr daw::static_array_t<word_t const, 64> const sha256_k{
+			alignas( 64 ) constexpr std::array<word_t const, 64> const sha256_k{
 			  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
 			  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
 			  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
@@ -257,7 +257,7 @@ namespace daw {
 
 		private:
 			uint64_t m_message_size;
-			daw::fixed_stack_t<byte_t, block_size_bytes> m_message_block;
+			daw::bounded_vector_t<byte_t, block_size_bytes> m_message_block;
 			sha256_digest_t m_state;
 
 		public:
@@ -273,11 +273,11 @@ namespace daw {
 				 * (first 32 bits of the fractional parts of the cube roots of the first
 				 * 64 primes 2..311):
 				 */
-				alignas( 64 ) daw::static_array_t<word_t, 64> w{0};
+				alignas( 64 ) std::array<word_t, 64> w{0};
 				// Copy message to first 16 words of w array
 				{
-					auto message_view = daw::make_array_view( m_message_block.data( ),
-					                                          m_message_block.size( ) );
+					auto message_view =
+					  daw::span( m_message_block.data( ), m_message_block.size( ) );
 					for( size_t i = 0; i < 16; ++i ) {
 						w[i] = impl::to_uint32_be( message_view.data( ) );
 						message_view.remove_prefix( 4 );
@@ -290,7 +290,7 @@ namespace daw {
 					w[i] = w[i - 16] + s0 + w[i - 7] + s1;
 				}
 
-				alignas( 64 ) daw::static_array_t<word_t, 10> tmp_state{
+				alignas( 64 ) std::array<word_t, 10> tmp_state{
 				  m_state[0], m_state[1], m_state[2], m_state[3], m_state[4],
 				  m_state[5], m_state[6], m_state[7], 0,          0};
 
@@ -370,18 +370,17 @@ namespace daw {
 
 		public:
 			constexpr void update( T const *message, size_t len ) noexcept {
-				auto view = daw::make_array_view( message, len );
+				auto view = daw::span( message, len );
 				update_impl( view );
 			}
 
-			template<typename Traits, typename IntIdxType>
-			constexpr void
-			update( daw::basic_string_view<T, Traits, IntIdxType> view ) noexcept {
+			template<typename Traits>
+			constexpr void update( daw::basic_string_view<T, Traits> view ) noexcept {
 				update_impl( std::move( view ) );
 			}
 
 			template<typename U, typename = std::enable_if_t<sizeof( U ) == 1>>
-			constexpr void update( daw::array_view<U> view ) noexcept {
+			constexpr void update( daw::span<U const> view ) noexcept {
 				update_impl( std::move( view ) );
 			}
 
@@ -424,10 +423,10 @@ namespace daw {
 
 		using sha256_ctx = sha2_ctx<256, unsigned char>;
 
-		template<typename CharT, typename Traits, typename IntSizeType,
+		template<typename CharT, typename Traits,
 		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
-		constexpr sha256_digest_t sha256_bin(
-		  daw::basic_string_view<CharT, Traits, IntSizeType> sv ) noexcept {
+		constexpr sha256_digest_t
+		sha256_bin( daw::basic_string_view<CharT, Traits> sv ) noexcept {
 			sha2_ctx<256, CharT> ctx{};
 			ctx.update( sv.data( ), sv.size( ) );
 			return ctx.final( );
@@ -475,10 +474,10 @@ namespace daw {
 			}
 		};
 
-		template<typename CharT, typename Traits, typename IntSizeType,
+		template<typename CharT, typename Traits,
 		         typename = std::enable_if_t<sizeof( CharT ) == 1>>
 		constexpr sha256_hash_string
-		sha256( daw::basic_string_view<char, Traits, IntSizeType> sv ) noexcept {
+		sha256( daw::basic_string_view<char, Traits> sv ) noexcept {
 			return daw::crypto::sha256_hash_string{daw::crypto::sha256_bin( sv )};
 		}
 
@@ -518,3 +517,4 @@ namespace daw {
 		}
 	} // namespace crypto_literals
 } // namespace daw
+

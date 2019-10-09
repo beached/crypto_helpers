@@ -22,13 +22,12 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
 
 #include <daw/daw_algorithm.h>
-#include <daw/daw_array_view.h>
-#include <daw/daw_fixed_stack.h>
 #include <daw/daw_span.h>
 #include <daw/daw_string_view.h>
 #include <daw/iterator/daw_iterator.h>
@@ -51,10 +50,10 @@ namespace daw {
 				using AES128_KEY_SIZE = std::integral_constant<uint8_t, 16u>;
 			} // namespace impl
 
-			using cipher_t = daw::static_array_t<uint8_t, 16>;
+			using cipher_t = std::array<uint8_t, 16>;
 
 			template<size_t KeyScheduleSize>
-			using key_schedule_t = daw::static_array_t<uint8_t, KeyScheduleSize>;
+			using key_schedule_t = std::array<uint8_t, KeyScheduleSize>;
 
 			using aes128_key_schedule_t =
 			  key_schedule_t<impl::AES128_KEY_SCHEDULE_SIZE::value>;
@@ -84,9 +83,9 @@ namespace daw {
 
 				constexpr uint8_t aes_inv( uint8_t a ) noexcept {
 					uint8_t const CHAIN_LEN = 11u;
-					daw::static_array_t<uint8_t, CHAIN_LEN> addition_chain_idx = {
+					std::array<uint8_t, CHAIN_LEN> addition_chain_idx = {
 					  0, 1, 1, 3, 4, 3, 6, 7, 3, 9, 1};
-					daw::static_array_t<uint8_t, CHAIN_LEN> prev_values{0};
+					std::array<uint8_t, CHAIN_LEN> prev_values{0};
 
 					for( uint_fast8_t i = 0; i < addition_chain_idx.size( ); ++i ) {
 						prev_values[i] = a;
@@ -128,7 +127,7 @@ namespace daw {
 
 				constexpr void
 				aes_add_round_key( daw::span<uint8_t> message,
-				                   daw::array_view<uint8_t> key ) noexcept {
+				                   daw::span<uint8_t const> key ) noexcept {
 					for( uint_fast8_t n = 0; n < AES_BLOCK_SIZE::value; ++n ) {
 						message[n] ^= key[n];
 					}
@@ -163,7 +162,7 @@ namespace daw {
 
 				constexpr void aes_mix_columns( daw::span<uint8_t> block ) noexcept {
 					for( uint_fast8_t n = 0; n < AES_NUM_COLUMNS::value; ++n ) {
-						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{
+						std::array<uint8_t, AES_COLUMN_SIZE::value> temp_column{
 						  static_cast<uint8_t>( aes_mul( block[blk_pos( 0, n )], 2u ) ^
 						                        aes_mul( block[blk_pos( 1, n )], 3u ) ^
 						                        block[blk_pos( 2, n )] ^
@@ -194,7 +193,7 @@ namespace daw {
 				constexpr void
 				aes_mix_columns_inv( daw::span<uint8_t> block ) noexcept {
 					for( uint_fast8_t n = 0; n < AES_NUM_COLUMNS::value; ++n ) {
-						daw::static_array_t<uint8_t, AES_COLUMN_SIZE::value> temp_column{
+						std::array<uint8_t, AES_COLUMN_SIZE::value> temp_column{
 						  static_cast<uint8_t>( aes_mul( block[blk_pos( 0, n )], 14u ) ^
 						                        aes_mul( block[blk_pos( 1, n )], 11u ) ^
 						                        aes_mul( block[blk_pos( 2, n )], 13u ) ^
@@ -223,7 +222,7 @@ namespace daw {
 				}
 
 				constexpr aes128_key_schedule_t
-				aes128_key_schedule( daw::array_view<uint8_t> key ) {
+				aes128_key_schedule( daw::span<uint8_t const> key ) {
 					uint8_t const AES_KEY_SCHEDULE_FIRST_RCON = 1u;
 					auto rcon = AES_KEY_SCHEDULE_FIRST_RCON;
 
@@ -275,7 +274,7 @@ namespace daw {
 				}
 
 				constexpr cipher_t
-				convert_state( daw::array_view<uint8_t> const &msg ) noexcept {
+				convert_state( daw::span<uint8_t const> const &msg ) noexcept {
 					return cipher_t{msg[0], msg[4],  msg[8],  msg[12], msg[1],  msg[5],
 					                msg[9], msg[13], msg[2],  msg[6],  msg[10], msg[14],
 					                msg[3], msg[7],  msg[11], msg[15]};
@@ -283,14 +282,14 @@ namespace daw {
 
 				/// @brief Encrypt a block of uint8_t's.
 				constexpr cipher_t
-				aes_encrypt_128_block( daw::array_view<uint8_t> input,
-				                       daw::array_view<uint8_t> key ) noexcept {
+				aes_encrypt_128_block( daw::span<uint8_t const> input,
+				                       daw::span<uint8_t const> key ) noexcept {
 
 					auto const key_sched = impl::aes128_key_schedule( key );
 					auto result = convert_state( input );
 					auto state = make_span( result );
 
-					auto key_round = make_array_view( key_sched );
+					auto key_round = make_span( key_sched );
 					impl::aes_add_round_key( state, key_round );
 
 					for( uint_fast8_t round = 1; round < AES128_NUM_ROUNDS::value;
@@ -309,12 +308,12 @@ namespace daw {
 					impl::aes_add_round_key( state, key_round );
 
 					return result;
-					// return convert_state( make_array_view( result ) );
+					// return convert_state( make_span( result ) );
 				}
 
 				constexpr cipher_t
-				aes_decrypt_128_block( daw::array_view<uint8_t> input,
-				                       daw::array_view<uint8_t> key ) noexcept {
+				aes_decrypt_128_block( daw::span<uint8_t const> input,
+				                       daw::span<uint8_t const> key ) noexcept {
 
 					auto const key_sched = impl::aes128_key_schedule( key );
 					cipher_t result{0};
@@ -322,7 +321,7 @@ namespace daw {
 					                      result.begin( ) );
 					auto state = make_span( result );
 
-					auto key_round = daw::make_array_view(
+					auto key_round = daw::make_span(
 					  key_sched, AES128_NUM_ROUNDS::value * AES_BLOCK_SIZE::value,
 					  AES_BLOCK_SIZE::value );
 					impl::aes_add_round_key( state, key_round );
@@ -332,7 +331,7 @@ namespace daw {
 
 					for( uint_fast8_t round = AES128_NUM_ROUNDS::value - 1u; round > 0;
 					     --round ) {
-						key_round = daw::make_array_view(
+						key_round = daw::make_span(
 						  key_sched, round * AES_BLOCK_SIZE::value, AES_BLOCK_SIZE::value );
 						impl::aes_add_round_key( state, key_round );
 
@@ -342,16 +341,16 @@ namespace daw {
 					}
 
 					key_round =
-					  daw::make_array_view( key_sched, 0, AES_BLOCK_SIZE::value );
+					  daw::make_span( key_sched, 0, AES_BLOCK_SIZE::value );
 					impl::aes_add_round_key( state, key_round );
 
 					// return result;
-					return convert_state( make_array_view( result ) );
+					return convert_state( make_span( result ) );
 				}
 
 				constexpr void
-				aes_encrypt_128_block( daw::array_view<uint8_t> input,
-				                       daw::array_view<uint8_t> key,
+				aes_encrypt_128_block( daw::span<uint8_t const> input,
+				                       daw::span<uint8_t const> key,
 				                       daw::span<uint8_t> cipher ) noexcept {
 					auto const tmp = aes_encrypt_128_block(
 					  input.subset( 0, AES_BLOCK_SIZE::value ), key );
@@ -362,8 +361,8 @@ namespace daw {
 
 			// cipher must have enough room for round(input.size(
 			// )/AES_BLOCK_SIZE::value) * AES_BLOCK_SIZE::value
-			constexpr void aes_encrypt_128( daw::array_view<uint8_t> input,
-			                                daw::array_view<uint8_t> key,
+			constexpr void aes_encrypt_128( daw::span<uint8_t const> input,
+			                                daw::span<uint8_t const> key,
 			                                daw::span<uint8_t> cipher ) noexcept {
 				size_t const count = input.size( ) / impl::AES_BLOCK_SIZE::value;
 				for( size_t n = 0; n < count; ++n ) {
@@ -373,10 +372,10 @@ namespace daw {
 					cipher.remove_prefix( impl::AES_BLOCK_SIZE::value );
 				}
 				if( !input.empty( ) ) {
-					daw::static_array_t<uint8_t, impl::AES_BLOCK_SIZE::value> ct_tmp{0};
+					std::array<uint8_t, impl::AES_BLOCK_SIZE::value> ct_tmp{0};
 					daw::algorithm::copy( input.cbegin( ), input.cend( ),
 					                      ct_tmp.begin( ) );
-					impl::aes_encrypt_128_block( daw::make_array_view( ct_tmp ), key,
+					impl::aes_encrypt_128_block( daw::make_span( ct_tmp ), key,
 					                             cipher );
 				}
 			} // namespace aes

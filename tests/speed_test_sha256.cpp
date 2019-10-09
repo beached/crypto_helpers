@@ -32,7 +32,7 @@
 int main( int, char ** ) {
 	using namespace daw::size_literals;
 	auto const test_data = daw::make_random_data<uint8_t>( 1_GB, 0, 255 );
-	auto view = daw::make_array_view( test_data.data( ), test_data.size( ) );
+	auto view = daw::span<uint8_t const>( test_data.data( ), test_data.size( ) );
 	daw::show_benchmark( view.size( ), "test001",
 	                     [&view]( ) {
 		                     daw::crypto::sha256_ctx ctx{};
